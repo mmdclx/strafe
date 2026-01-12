@@ -35,6 +35,7 @@ struct TouchDebugInfo {
     let phase: TouchPhase
     let movedBeyondRest: Bool
     let movedBeyondScroll: Bool
+    let travel: CGFloat
 }
 
 struct GestureDebugState {
@@ -42,6 +43,8 @@ struct GestureDebugState {
     let restingId: Int?
     let tapCandidateId: Int?
     let tapCandidateDeltaX: Float?
+    let tapCandidateTravel: CGFloat?
+    let restingTravel: CGFloat?
     let scrollSuppressed: Bool
     let lastTriggerAge: TimeInterval
     let tapLocked: Bool
@@ -52,7 +55,9 @@ struct GestureDebugState {
 final class GestureClassifier {
     private struct TouchInfo {
         let id: Int
+        let startPosition: CGPoint
         var position: CGPoint
+        var travel: CGFloat
         let downTime: TimeInterval
         var lastUpdate: TimeInterval
         var phase: TouchPhase
@@ -73,6 +78,7 @@ final class GestureClassifier {
     private var restingDownTime: TimeInterval?
     private var tapCandidate: TapCandidate?
     private var scrollSuppressed = false
+    private var scrollSuppressedUntil: TimeInterval?
     private var lastTriggerTime: TimeInterval = 0
     private var tapLocked = false
     private var restingMissingSince: TimeInterval?
@@ -91,18 +97,16 @@ final class GestureClassifier {
 
         for sample in samples {
             if var info = activeTouches[sample.id] {
-                let dx = Float(sample.position.x - info.position.x)
-                let dy = Float(sample.position.y - info.position.y)
-                let distance = hypotf(dx, dy)
-
-                if distance > AppConstants.restingMovementThreshold {
+                let travel = distance(sample.position, info.startPosition)
+                if travel > CGFloat(AppConstants.restingMovementThreshold) {
                     info.movedBeyondRest = true
                 }
-                if distance > AppConstants.scrollMovementThreshold {
+                if travel > CGFloat(AppConstants.scrollMovementThreshold) {
                     info.movedBeyondScroll = true
                 }
 
                 info.position = sample.position
+                info.travel = travel
                 info.lastUpdate = now
                 info.lastPhase = info.phase
                 info.phase = sample.phase
@@ -110,7 +114,9 @@ final class GestureClassifier {
             } else {
                 activeTouches[sample.id] = TouchInfo(
                     id: sample.id,
+                    startPosition: sample.position,
                     position: sample.position,
+                    travel: 0,
                     downTime: now,
                     lastUpdate: now,
                     phase: sample.phase,
@@ -128,11 +134,13 @@ final class GestureClassifier {
         if currentIds.count >= 2 {
             let movingTouches = activeTouches.values.filter { $0.movedBeyondScroll }.count
             if movingTouches >= 2 {
-                scrollSuppressed = true
+                scrollSuppressedUntil = now + AppConstants.scrollSuppressionSeconds
                 tapCandidate = nil
             }
-        } else {
-            scrollSuppressed = false
+        }
+        scrollSuppressed = scrollSuppressedUntil.map { now < $0 } ?? false
+        if currentIds.count <= 1 && !scrollSuppressed {
+            scrollSuppressedUntil = nil
         }
 
         if currentIds.count <= 1 {
@@ -210,17 +218,22 @@ final class GestureClassifier {
            tapCandidate == nil,
            !tapLocked,
            !restingInfo.movedBeyondRest {
-            if let candidateInfo = selectCandidate(restingId: restingId, newIds: newIds) {
-                let deltaX = Float(candidateInfo.position.x - restingInfo.position.x)
-                tapCandidate = TapCandidate(id: candidateInfo.id, deltaX: deltaX, downTime: candidateInfo.downTime)
-                tapLocked = true
+            if let restingDownTime, now - restingDownTime >= AppConstants.restingMinAgeSeconds {
+                if let candidateInfo = selectCandidate(restingId: restingId, newIds: newIds) {
+                    let deltaX = Float(candidateInfo.position.x - restingInfo.position.x)
+                    tapCandidate = TapCandidate(id: candidateInfo.id, deltaX: deltaX, downTime: candidateInfo.downTime)
+                    tapLocked = true
+                }
             }
         }
 
         if let candidate = tapCandidate,
-           let candidateInfo = activeTouches[candidate.id],
-           candidateInfo.movedBeyondScroll {
-            tapCandidate = nil
+           let candidateInfo = activeTouches[candidate.id] {
+            if candidateInfo.movedBeyondScroll || candidateInfo.travel > CGFloat(AppConstants.tapCandidateMaxTravel) {
+                tapCandidate = nil
+                scrollSuppressedUntil = now + AppConstants.scrollSuppressionSeconds
+                scrollSuppressed = true
+            }
         }
 
         if let candidate = tapCandidate,
@@ -235,6 +248,7 @@ final class GestureClassifier {
         if let newCandidate = newIds
             .filter({ $0 != restingId })
             .compactMap({ activeTouches[$0] })
+            .filter({ !$0.movedBeyondRest })
             .sorted(by: { $0.downTime > $1.downTime })
             .first {
             if let restingDownTime {
@@ -248,11 +262,14 @@ final class GestureClassifier {
 
         return activeTouches.values
             .filter { $0.id != restingId && $0.phase.isBeginning }
+            .filter { !$0.movedBeyondRest }
             .sorted(by: { $0.downTime > $1.downTime })
             .first
     }
 
     private func shouldTriggerTap(candidate: TapCandidate, now: TimeInterval, currentIds: Set<Int>) -> Bool {
+        guard let candidateInfo = activeTouches[candidate.id] else { return false }
+        guard candidateInfo.travel <= CGFloat(AppConstants.tapCandidateMaxTravel) else { return false }
         guard now - lastTriggerTime >= AppConstants.cooldownSeconds else { return false }
         guard now - candidate.downTime <= AppConstants.tapMaxDurationSeconds else { return false }
         guard abs(candidate.deltaX) >= AppConstants.minTapDelta else { return false }
@@ -277,6 +294,7 @@ final class GestureClassifier {
         restingPosition = nil
         tapCandidate = nil
         scrollSuppressed = false
+        scrollSuppressedUntil = nil
         tapLocked = false
         restingMissingSince = nil
         lastTwoTouchTime = nil
@@ -289,17 +307,22 @@ final class GestureClassifier {
                 position: info.position,
                 phase: info.phase,
                 movedBeyondRest: info.movedBeyondRest,
-                movedBeyondScroll: info.movedBeyondScroll
+                movedBeyondScroll: info.movedBeyondScroll,
+                travel: info.travel
             )
         }
         let lastTriggerAge = lastTriggerTime > 0 ? now - lastTriggerTime : -1
         let tapCandidateAge = tapCandidate.map { now - $0.downTime }
         let restingMissingAge = restingMissingSince.map { now - $0 }
+        let tapCandidateTravel = tapCandidate.flatMap { activeTouches[$0.id]?.travel }
+        let restingTravel = restingTouchId.flatMap { activeTouches[$0]?.travel }
         return GestureDebugState(
             touches: touches,
             restingId: restingTouchId,
             tapCandidateId: tapCandidate?.id,
             tapCandidateDeltaX: tapCandidate?.deltaX,
+            tapCandidateTravel: tapCandidateTravel,
+            restingTravel: restingTravel,
             scrollSuppressed: scrollSuppressed,
             lastTriggerAge: lastTriggerAge,
             tapLocked: tapLocked,

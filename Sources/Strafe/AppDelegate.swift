@@ -23,16 +23,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.eventRouter.handle(event)
         }
         gestureEngine.onDebugState = { [weak self] state in
-            self?.debugWindowController?.handle(debugState: state)
+            guard let self else { return }
+            let frontmost = self.frontmostQuery.frontmostBundleId()
+            let trusted = self.permissionService.isTrusted()
+            self.debugWindowController?.handle(debugState: state, frontmostBundleId: frontmost, isTrusted: trusted)
         }
         gestureEngine.start()
 
-        Log.info(Log.app, "TabTap started")
+        Log.info(Log.app, "Strafe started")
     }
 
     func applicationWillTerminate(_ notification: Notification) {
         gestureEngine.stop()
-        Log.info(Log.app, "TabTap stopped")
+        Log.info(Log.app, "Strafe stopped")
     }
 
     private func setupStatusItem() {
@@ -47,7 +50,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         debugItem.target = self
         menu.addItem(debugItem)
         menu.addItem(.separator())
-        let quitItem = NSMenuItem(title: "Quit TabTap", action: #selector(quitApp), keyEquivalent: "q")
+        let quitItem = NSMenuItem(title: "Quit Strafe", action: #selector(quitApp), keyEquivalent: "q")
         quitItem.target = self
         menu.addItem(quitItem)
         item.menu = menu

@@ -39,8 +39,9 @@ final class DebugWindowController: NSWindowController, NSWindowDelegate {
         }
     }
 
-    func handle(debugState: GestureDebugState) {
+    func handle(debugState: GestureDebugState, frontmostBundleId: String?, isTrusted: Bool) {
         guard window?.isVisible == true else { return }
+        flashView.updateStatus(frontmostBundleId: frontmostBundleId, isTrusted: isTrusted)
         flashView.updateDebugState(debugState)
     }
 }
@@ -51,6 +52,9 @@ private final class DebugFlashView: NSView {
     private let gestureOverlay = DebugGestureOverlayView()
     private let coordsLabel = NSTextField(labelWithString: "Callbacks: 0 | Touches: 0")
     private var callbackCount: Int = 0
+    private var frontmostBundleId: String?
+    private var isTrusted: Bool?
+    private var lastState: GestureDebugState?
 
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
@@ -92,8 +96,17 @@ private final class DebugFlashView: NSView {
 
     func updateDebugState(_ state: GestureDebugState) {
         gestureOverlay.debugState = state
+        lastState = state
         callbackCount += 1
         coordsLabel.stringValue = formatCoords(state)
+    }
+
+    func updateStatus(frontmostBundleId: String?, isTrusted: Bool) {
+        self.frontmostBundleId = frontmostBundleId
+        self.isTrusted = isTrusted
+        if let state = lastState {
+            coordsLabel.stringValue = formatCoords(state)
+        }
     }
 
     private func configureOverlay(_ view: NSView, color: NSColor) {
@@ -115,17 +128,22 @@ private final class DebugFlashView: NSView {
         let resting = state.restingId.map(String.init) ?? "-"
         let candidate = state.tapCandidateId.map(String.init) ?? "-"
         let delta = state.tapCandidateDeltaX.map { String(format: "%.3f", $0) } ?? "-"
+        let restingTravel = state.restingTravel.map { String(format: "%.3f", $0) } ?? "-"
+        let candidateTravel = state.tapCandidateTravel.map { String(format: "%.3f", $0) } ?? "-"
         let suppressed = state.scrollSuppressed ? "yes" : "no"
         let lastAge = state.lastTriggerAge >= 0 ? String(format: "%.2fs", state.lastTriggerAge) : "-"
         let locked = state.tapLocked ? "yes" : "no"
         let candidateAge = state.tapCandidateAge.map { String(format: "%.2fs", $0) } ?? "-"
         let missingAge = state.restingMissingAge.map { String(format: "%.2fs", $0) } ?? "-"
+        let trusted = isTrusted.map { $0 ? "yes" : "no" } ?? "-"
+        let frontmost = frontmostBundleId ?? "-"
         let counts = "Callbacks: \(callbackCount) | Touches: \(state.touches.count)"
-        let summary = "Resting: \(resting) Tap: \(candidate) dX: \(delta) Locked: \(locked) Cand: \(candidateAge) Missing: \(missingAge) Suppressed: \(suppressed) Last: \(lastAge)"
+        let context = "Trusted: \(trusted) Front: \(frontmost)"
+        let summary = "Resting: \(resting) Tap: \(candidate) dX: \(delta) rMv: \(restingTravel) cMv: \(candidateTravel) Locked: \(locked) Cand: \(candidateAge) Missing: \(missingAge) Suppressed: \(suppressed) Last: \(lastAge)"
         let phases = state.touches
             .map { "\($0.id):\($0.phase.rawValue.prefix(3))" }
             .joined(separator: " ")
-        return "\(counts) | \(summary) | \(phases)"
+        return "\(counts) | \(context) | \(summary) | \(phases)"
     }
 }
 

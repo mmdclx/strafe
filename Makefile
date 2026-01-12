@@ -1,4 +1,4 @@
-APP_NAME := TabTap
+APP_NAME := Strafe
 BUILD_DIR := build
 APP_BUNDLE := $(BUILD_DIR)/$(APP_NAME).app
 MACOS_DIR := $(APP_BUNDLE)/Contents/MacOS

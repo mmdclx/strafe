@@ -1,11 +1,11 @@
-# Handover - TabTap MVP
+# Handover - Strafe MVP
 
 ## Project Summary
-TabTap is a macOS menu bar app that enables a custom trackpad gesture (rest one finger + tap another to left/right) to switch browser tabs in Chrome/Safari. The app is intentionally minimal: menu bar icon with Quit, and a Debug window for visualizing gesture detection.
+Strafe is a macOS menu bar app that enables a custom trackpad gesture (rest one finger + tap another to left/right) to switch browser tabs in Chrome/Safari. The app is intentionally minimal: menu bar icon with Quit, and a Debug window for visualizing gesture detection.
 
 ## Current State (as of handover)
 - We migrated from raw `MultitouchSupport.framework` bindings to **OpenMultitouchSupport** (private, SPM) for stable touch IDs and touch state.
-- Build tooling moved to **Swift Package Manager** via `Package.swift` and `Makefile` now calls `swift build` then copies the binary into `build/TabTap.app`.
+- Build tooling moved to **Swift Package Manager** via `Package.swift` and `Makefile` now calls `swift build` then copies the binary into `build/Strafe.app`.
 - A Debug window exists in the menu bar to visualize touches and tap detection. It shows:
   - Green dots = current touches
   - Yellow ring = resting touch
@@ -27,11 +27,11 @@ TabTap is a macOS menu bar app that enables a custom trackpad gesture (rest one 
 ## Important Files
 - `Package.swift` — SPM manifest (OpenMultitouchSupport dependency).
 - `Makefile` — build/run wrapper for SPM binary -> app bundle.
-- `Sources/TabTap/Gesture/MultitouchGestureEngine.swift` — now uses `OMSManager` (OpenMultitouchSupport) to stream touches.
-- `Sources/TabTap/Gesture/GestureClassifier.swift` — current gesture logic, now using touch phases (`starting/making/touching/breaking/leaving`).
-- `Sources/TabTap/Debug/DebugWindowController.swift` — debug overlay and label string.
-- `Sources/TabTap/AppDelegate.swift` — menu bar setup, Debug window entry.
-- `Sources/TabTap/Protocols.swift` — protocols now `@MainActor` to satisfy Swift 6 concurrency checks.
+- `Sources/Strafe/Gesture/MultitouchGestureEngine.swift` — now uses `OMSManager` (OpenMultitouchSupport) to stream touches.
+- `Sources/Strafe/Gesture/GestureClassifier.swift` — current gesture logic, now using touch phases (`starting/making/touching/breaking/leaving`).
+- `Sources/Strafe/Debug/DebugWindowController.swift` — debug overlay and label string.
+- `Sources/Strafe/AppDelegate.swift` — menu bar setup, Debug window entry.
+- `Sources/Strafe/Protocols.swift` — protocols now `@MainActor` to satisfy Swift 6 concurrency checks.
 - `PRD.md` and `TECH_SPEC.md` — updated to mention OpenMultitouchSupport.
 
 ## Current Compilation Status
@@ -56,4 +56,3 @@ TabTap is a macOS menu bar app that enables a custom trackpad gesture (rest one 
 ## Notes
 - This is direct distribution only; private multitouch is not App Store safe.
 - Accessibility permission is required for keystroke injection.
-
