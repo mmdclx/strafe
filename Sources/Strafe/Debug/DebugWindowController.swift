@@ -69,7 +69,10 @@ private final class DebugFlashView: NSView {
 
         coordsLabel.font = NSFont.monospacedSystemFont(ofSize: 11, weight: .regular)
         coordsLabel.textColor = NSColor.secondaryLabelColor
-        coordsLabel.lineBreakMode = .byTruncatingTail
+        coordsLabel.lineBreakMode = .byWordWrapping
+        coordsLabel.usesSingleLineMode = false
+        coordsLabel.maximumNumberOfLines = 0
+        coordsLabel.alignment = .left
         addSubview(coordsLabel)
     }
 
@@ -83,7 +86,8 @@ private final class DebugFlashView: NSView {
         leftOverlay.frame = NSRect(x: 0, y: 0, width: halfWidth, height: bounds.height)
         rightOverlay.frame = NSRect(x: halfWidth, y: 0, width: bounds.width - halfWidth, height: bounds.height)
         gestureOverlay.frame = bounds
-        coordsLabel.frame = NSRect(x: 12, y: 8, width: bounds.width - 24, height: 16)
+        let labelHeight = min(bounds.height * 0.3, 120)
+        coordsLabel.frame = NSRect(x: 12, y: 8, width: bounds.width - 24, height: labelHeight)
     }
 
     func flashLeft() {
@@ -138,12 +142,13 @@ private final class DebugFlashView: NSView {
         let trusted = isTrusted.map { $0 ? "yes" : "no" } ?? "-"
         let frontmost = frontmostBundleId ?? "-"
         let counts = "Callbacks: \(callbackCount) | Touches: \(state.touches.count)"
-        let context = "Trusted: \(trusted) Front: \(frontmost)"
-        let summary = "Resting: \(resting) Tap: \(candidate) dX: \(delta) rMv: \(restingTravel) cMv: \(candidateTravel) Locked: \(locked) Cand: \(candidateAge) Missing: \(missingAge) Suppressed: \(suppressed) Last: \(lastAge)"
+        let context = "Trusted: \(trusted) | Front: \(frontmost)"
+        let summary = "Resting: \(resting) | Tap: \(candidate) | dX: \(delta) | rMv: \(restingTravel) | cMv: \(candidateTravel) | Locked: \(locked)"
+        let timing = "Cand: \(candidateAge) | Missing: \(missingAge) | Suppressed: \(suppressed) | Last: \(lastAge)"
         let phases = state.touches
             .map { "\($0.id):\($0.phase.rawValue.prefix(3))" }
             .joined(separator: " ")
-        return "\(counts) | \(context) | \(summary) | \(phases)"
+        return "\(counts)\n\(context)\n\(summary)\n\(timing)\n\(phases)"
     }
 }
 
