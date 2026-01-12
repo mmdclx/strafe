@@ -21,6 +21,7 @@ enum AppConstants {
     static let tapMinDelaySeconds: TimeInterval = 0.01 // Minimum time between resting touch and tap candidate.
     static let restingMinAgeSeconds: TimeInterval = 0.05 // Required age of resting touch before accepting taps.
     static let cooldownSeconds: TimeInterval = 0.025 // Minimum time between triggered gestures.
+    static let clickSuppressionSeconds: TimeInterval = 0.12 // Drop left-clicks immediately after a successful gesture.
 
     // Tap geometry
     static let minTapDelta: Float = 0.02 // Minimum left/right separation between rest and tap.

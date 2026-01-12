@@ -10,14 +10,15 @@ final class GestureEventRouter {
         self.permissionChecker = permissionChecker
     }
 
-    func handle(_ event: GestureEvent) {
+    @discardableResult
+    func handle(_ event: GestureEvent) -> Bool {
         guard permissionChecker.isTrusted() else {
             Log.debug(Log.permissions, "Gesture ignored - accessibility not trusted")
-            return
+            return false
         }
         guard let bundleId = frontmostQuery.frontmostBundleId(),
               AppConstants.supportedBrowsers.contains(bundleId) else {
-            return
+            return false
         }
 
         switch event {
@@ -26,5 +27,6 @@ final class GestureEventRouter {
         case .right:
             browserNavigator.navigateRight()
         }
+        return true
     }
 }

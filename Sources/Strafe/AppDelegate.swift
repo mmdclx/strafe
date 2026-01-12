@@ -5,6 +5,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let permissionService = AccessibilityPermissionService()
     private let frontmostQuery = FrontmostAppQuery()
     private let browserController = KeystrokeBrowserController()
+    private let clickSuppressor = ClickSuppressor()
     private lazy var eventRouter = GestureEventRouter(
         frontmostQuery: frontmostQuery,
         browserNavigator: browserController,
@@ -17,10 +18,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupStatusItem()
         permissionService.promptIfNeeded()
+        clickSuppressor.start()
 
         gestureEngine.onGesture = { [weak self] event in
-            self?.debugWindowController?.handle(event)
-            self?.eventRouter.handle(event)
+            guard let self else { return }
+            self.debugWindowController?.handle(event)
+            if self.eventRouter.handle(event) {
+                self.clickSuppressor.suppressClicks(for: AppConstants.clickSuppressionSeconds)
+            }
         }
         gestureEngine.onDebugState = { [weak self] state in
             guard let self else { return }
@@ -35,6 +40,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillTerminate(_ notification: Notification) {
         gestureEngine.stop()
+        clickSuppressor.stop()
         Log.info(Log.app, "Strafe stopped")
     }
 
