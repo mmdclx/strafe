@@ -17,6 +17,7 @@ enum AppConstants {
     // Tap timing
     static let tapMaxDurationSeconds: TimeInterval = 0.45 // Max time a tap candidate can live before expiring.
     static let tapReleaseGraceSeconds: TimeInterval = 0.06 // Debounce window after two-finger contact ends.
+    static let tapRearmSeconds: TimeInterval = 0.02 // Rearm delay after a completed tap while resting stays stable.
     static let tapMinDelaySeconds: TimeInterval = 0.01 // Minimum time between resting touch and tap candidate.
     static let restingMinAgeSeconds: TimeInterval = 0.05 // Required age of resting touch before accepting taps.
     static let cooldownSeconds: TimeInterval = 0.025 // Minimum time between triggered gestures.

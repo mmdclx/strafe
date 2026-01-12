@@ -81,8 +81,8 @@ final class GestureClassifier {
     private var scrollSuppressedUntil: TimeInterval?
     private var lastTriggerTime: TimeInterval = 0
     private var tapLocked = false
+    private var tapRearmAt: TimeInterval?
     private var restingMissingSince: TimeInterval?
-    private var lastTwoTouchTime: TimeInterval?
 
     func process(samples: [TouchSample], now: TimeInterval) -> (GestureEvent?, GestureDebugState) {
         if samples.isEmpty {
@@ -128,14 +128,13 @@ final class GestureClassifier {
         }
 
         if currentIds.count >= 2 {
-            lastTwoTouchTime = now
-        }
-
-        if currentIds.count >= 2 {
             let movingTouches = activeTouches.values.filter { $0.movedBeyondScroll }.count
             if movingTouches >= 2 {
                 scrollSuppressedUntil = now + AppConstants.scrollSuppressionSeconds
                 tapCandidate = nil
+                if tapLocked {
+                    tapRearmAt = scrollSuppressedUntil
+                }
             }
         }
         scrollSuppressed = scrollSuppressedUntil.map { now < $0 } ?? false
@@ -143,12 +142,9 @@ final class GestureClassifier {
             scrollSuppressedUntil = nil
         }
 
-        if currentIds.count <= 1 {
-            if let lastTwoTouchTime, now - lastTwoTouchTime < AppConstants.tapReleaseGraceSeconds {
-                // Keep tapLocked briefly to avoid retriggers when touches jitter.
-            } else {
-                tapLocked = false
-            }
+        if tapCandidate == nil, let tapRearmAt, now >= tapRearmAt {
+            tapLocked = false
+            self.tapRearmAt = nil
         }
 
         if restingTouchId == nil {
@@ -184,6 +180,7 @@ final class GestureClassifier {
                     restingPosition = nil
                     tapCandidate = nil
                     tapLocked = false
+                    tapRearmAt = nil
                     restingMissingSince = nil
                 }
             }
@@ -205,6 +202,7 @@ final class GestureClassifier {
                     tapLocked = true
                 }
                 tapCandidate = nil
+                scheduleTapRearm(now: now, currentIds: currentIds)
             }
         }
 
@@ -223,6 +221,7 @@ final class GestureClassifier {
                     let deltaX = Float(candidateInfo.position.x - restingInfo.position.x)
                     tapCandidate = TapCandidate(id: candidateInfo.id, deltaX: deltaX, downTime: candidateInfo.downTime)
                     tapLocked = true
+                    tapRearmAt = nil
                 }
             }
         }
@@ -233,12 +232,14 @@ final class GestureClassifier {
                 tapCandidate = nil
                 scrollSuppressedUntil = now + AppConstants.scrollSuppressionSeconds
                 scrollSuppressed = true
+                scheduleTapRearm(now: now, currentIds: currentIds, delay: AppConstants.scrollSuppressionSeconds)
             }
         }
 
         if let candidate = tapCandidate,
            now - candidate.downTime > AppConstants.tapMaxDurationSeconds {
             tapCandidate = nil
+            scheduleTapRearm(now: now, currentIds: currentIds)
         }
 
         return (triggeredEvent, debugState(now: now))
@@ -287,6 +288,18 @@ final class GestureClassifier {
         return true
     }
 
+    private func scheduleTapRearm(now: TimeInterval, currentIds: Set<Int>, delay: TimeInterval? = nil) {
+        let resolvedDelay: TimeInterval
+        if let delay {
+            resolvedDelay = delay
+        } else if let restingId = restingTouchId, currentIds.contains(restingId) {
+            resolvedDelay = AppConstants.tapRearmSeconds
+        } else {
+            resolvedDelay = AppConstants.tapReleaseGraceSeconds
+        }
+        tapRearmAt = now + resolvedDelay
+    }
+
     private func resetState() {
         activeTouches.removeAll()
         restingTouchId = nil
@@ -296,8 +309,8 @@ final class GestureClassifier {
         scrollSuppressed = false
         scrollSuppressedUntil = nil
         tapLocked = false
+        tapRearmAt = nil
         restingMissingSince = nil
-        lastTwoTouchTime = nil
     }
 
     private func debugState(now: TimeInterval) -> GestureDebugState {
