@@ -1,10 +1,13 @@
 # Gesture Reliability Tuning PRD (Concise)
 
 ## Summary
-Reduce accidental tab-switch triggers during two-finger scrolling while preserving fast, reliable tap navigation. Keep a strict allowlist of bundle IDs and add Finder.
+Reduce accidental tab-switch triggers during two-finger scrolling while preserving fast, reliable tap navigation. Keep a strict allowlist of bundle IDs and add Finder/Terminal.
+
+## Status
+Implemented on main; keep for reference unless we decide to archive/delete.
 
 ## Goals
-- Eliminate scroll-triggered tab switches in Chrome/Safari/Finder.
+- Eliminate scroll-triggered tab switches in Chrome/Safari/Finder/Terminal.
 - Maintain responsive, reliable left/right tap detection.
 - Keep explicit bundle allowlist (no auto-discovery).
 
@@ -26,4 +29,4 @@ Reduce accidental tab-switch triggers during two-finger scrolling while preservi
 
 ## QA Notes
 - Manual test matrix: two-finger scroll, tap left/right, repeated taps, jittery rests.
-- Confirm frontmost app gating works for Chrome, Safari, Finder only.
+- Confirm frontmost app gating works for Chrome, Safari, Finder, Terminal only.

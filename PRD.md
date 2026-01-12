@@ -1,16 +1,16 @@
-# macOS Tab Browsing Trackpad Helper — PRD (Draft)
+# Strafe — PRD (Draft)
 
 ## 1) Summary
-A macOS menu bar app that enables a single, custom trackpad gesture for fast left/right tab navigation in Chrome and Safari. The app runs as an icon-only menu bar utility with a single “Quit” action.
+A macOS menu bar app that enables a single, custom trackpad gesture for fast left/right tab navigation in supported apps (Chrome, Safari, Finder, Terminal). The app runs as an icon-only menu bar utility with a single “Quit” action.
 
 ## 2) Goals
-- Provide a fast, low-friction way to move left/right across tabs in Chrome and Safari via a custom two-finger “rest + tap” gesture.
+- Provide a fast, low-friction way to move left/right across tabs in supported apps via a custom two-finger “rest + tap” gesture.
 - Keep the MVP minimal: no settings UI, no onboarding beyond system permission prompts.
 - Ensure wrap-around behavior at tab boundaries.
 
 ## 3) Non-goals (MVP)
 - Windows or Linux support.
-- Other browsers (Firefox, Arc, etc.).
+- Other apps outside the explicit allowlist (e.g., Firefox, Arc).
 - Gesture customization or keyboard shortcuts.
 - UI beyond menu bar icon with “Quit”.
 - Analytics, accounts, or cloud sync.
@@ -32,12 +32,12 @@ A macOS menu bar app that enables a single, custom trackpad gesture for fast lef
 - Trigger a tab navigation action immediately on detection.
 - Allow repeated taps while the resting finger remains down, producing repeated tab switches.
 - Distinguish intentional tap gestures from two-finger scrolls; do not trigger tab switches on scroll gestures.
-- Apply a minimum 50ms cooldown between taps to prevent accidental rapid cycling.
+- Apply a minimum 25ms cooldown between taps to prevent accidental rapid cycling.
 
-### 6.2 Browser Targeting
-- Support Chrome and Safari only.
-- Only act when Chrome or Safari is frontmost; otherwise do nothing.
-- Actions are sent to the frontmost supported browser.
+### 6.2 App Targeting
+- Support Chrome, Safari, Finder, and Terminal only.
+- Only act when a supported app is frontmost; otherwise do nothing.
+- Actions are sent to the frontmost supported app.
 
 ### 6.3 Tab Navigation
 - Move left or right among tabs.
@@ -51,7 +51,8 @@ A macOS menu bar app that enables a single, custom trackpad gesture for fast lef
 ### 6.5 Permissions & System Integration
 - The app must request the minimum macOS permissions required to:
   - Observe trackpad touches/gestures.
-  - Send tab-switch actions to the active browser (Accessibility permission for simulated keystrokes).
+  - Send tab-switch actions to the active app (Accessibility permission for simulated keystrokes).
+- Input Monitoring is required to read raw touch data from the trackpad.
 - If permissions are not granted, the app should fail gracefully and prompt the user to enable them.
 
 ## 7) UX Requirements
@@ -60,9 +61,9 @@ A macOS menu bar app that enables a single, custom trackpad gesture for fast lef
 - Action latency should feel instantaneous (<100ms from tap to tab switch).
 
 ## 8) Technical Considerations (MVP)
-- Gesture capture: use trackpad touch events (likely via NSEvent or a lower-level tap if necessary).
+- Gesture capture: use OpenMultitouchSupport for raw trackpad touch data.
 - Browser control:
-  - Send standard tab-navigation keystrokes to the frontmost browser (e.g., Ctrl+Tab / Ctrl+Shift+Tab) and assume wrap-around behavior for MVP.
+  - Send standard tab-navigation keystrokes to the frontmost supported app (e.g., Ctrl+Tab / Ctrl+Shift+Tab) and assume wrap-around behavior for MVP.
 - Process: single background menu bar app; no separate helper.
 ### 8.1 Libraries & Framework Approach (MVP)
 - Prefer well-known system frameworks over custom code wherever possible.
@@ -74,27 +75,28 @@ A macOS menu bar app that enables a single, custom trackpad gesture for fast lef
 - User taps too close to resting finger; define a minimal left/right delta (e.g., N points) to avoid misfires.
 - Accidental second-finger taps when performing other trackpad actions.
 - Trackpad hardware differences (Magic Trackpad vs MacBook trackpad).
-- When Chrome/Safari isn’t frontmost, do nothing (do not steal focus).
+- When a supported app isn’t frontmost, do nothing (do not steal focus).
+- Finder/Terminal may require different key bindings for native tab switching.
 - Two-finger scroll should not trigger tab switching.
 
 ## 10) Security & Privacy
 - No data collection.
 - No network access.
-- Only local gesture processing and local browser control.
+- Only local gesture processing and local app control.
 
 ## 11) Success Criteria
 - 95%+ correct left/right detection during normal usage.
 - <100ms reaction time from tap to tab change.
-- Reliable wrap-around on both Chrome and Safari.
+- Reliable wrap-around on supported apps.
 - No crashes when permissions are denied.
 
 ## 12) MVP Scope Checklist
-- [ ] Menu bar app with icon and “Quit”.
-- [ ] Trackpad “rest + tap left/right” detection.
-- [ ] Tab navigation for Chrome & Safari.
-- [ ] Wrap-around behavior.
-- [ ] Permissions handling and graceful failure messaging.
-- [ ] Minimum 50ms tap cooldown.
+- [x] Menu bar app with icon and “Quit”.
+- [x] Trackpad “rest + tap left/right” detection.
+- [x] Tab navigation for supported apps.
+- [x] Wrap-around behavior (where supported by the app).
+- [x] Permissions handling and graceful failure messaging.
+- [x] Minimum 25ms tap cooldown.
 
 ## 13) Visual Design (MVP)
 - Menu bar icon uses a Lucide-style minimalist glyph (template monochrome).

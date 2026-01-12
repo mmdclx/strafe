@@ -1,7 +1,7 @@
-# macOS Tab Browsing Trackpad Helper - Technical Spec (MVP)
+# Strafe - Technical Spec (MVP)
 
 ## 1) Scope
-- macOS menu bar app that detects a custom trackpad gesture and switches tabs left/right in Chrome or Safari.
+- macOS menu bar app that detects a custom trackpad gesture and switches tabs left/right in supported apps (Chrome, Safari, Finder, Terminal).
 - MVP is direct distribution only; App Store eligibility is a future consideration.
 
 ## 2) Design Principles
@@ -31,11 +31,11 @@
 ## 5) Core Modules
 ### 5.1 GestureEngine
 - Consumes raw touch data and emits `GestureEvent.left` / `GestureEvent.right`.
-- Owns a small state machine for "rest + tap" and a 50ms cooldown.
+- Owns a small state machine for "rest + tap", a 25ms cooldown, and a short rearm window for rapid taps.
 
 ### 5.2 BrowserController
-- Sends `Ctrl+Tab` and `Ctrl+Shift+Tab` to the frontmost browser.
-- Gated by frontmost app: only Chrome or Safari.
+- Sends `Ctrl+Tab` and `Ctrl+Shift+Tab` to the frontmost supported app.
+- Gated by frontmost app allowlist (Chrome, Safari, Finder, Terminal).
 
 ### 5.3 PermissionService
 - Checks Accessibility trust.
@@ -53,7 +53,7 @@
 - `GestureDetecting`: start/stop, emits high-level left/right events.
 - `BrowserNavigating`: `navigateLeft()`, `navigateRight()`.
 - `PermissionChecking`: `isTrusted()`, `promptIfNeeded()`.
-- `FrontmostAppQuerying`: `frontmostAppId()`.
+- `FrontmostAppQuerying`: `frontmostBundleId()`.
 
 ## 7) Gesture Detection Details
 ### 7.1 Touch Model
@@ -66,31 +66,35 @@
 - Ignore taps where abs(delta X) < MIN_DELTA.
 
 ### 7.3 Scroll Suppression
-- Detect two-finger scroll intent by movement magnitude and velocity while both fingers are down.
-- If movement exceeds SCROLL_THRESHOLD, suppress gesture events until fingers lift.
+- Detect two-finger scroll intent by cumulative travel while both fingers are down.
+- If movement exceeds SCROLL_THRESHOLD, suppress gesture events for a short window.
 
 ### 7.4 Cooldown
-- Minimum 50ms between recognized taps.
+- Minimum 25ms between recognized taps.
 - Track last-trigger timestamp and ignore taps inside window.
+- Use a short rearm window for rapid repeated taps while the resting finger stays stable.
 
 ### 7.5 Repeated Taps
-- As long as resting finger remains down, allow subsequent taps to trigger navigation.
+- As long as the resting finger remains down, allow subsequent taps to trigger navigation after a short rearm delay.
 
 ## 8) Browser Navigation
-- If frontmost app bundle ID is Chrome or Safari, post keystrokes:
+- If frontmost app bundle ID is in the allowlist, post keystrokes:
   - Right: `Ctrl+Tab`
   - Left: `Ctrl+Shift+Tab`
-- Assume wrap-around behavior for MVP.
+- Assume wrap-around behavior for MVP (app-dependent).
 
 ## 9) Permissions
 - Accessibility is required for key injection.
+- Input Monitoring is required to read raw touch data.
 - On startup, check trust; if not trusted, prompt and show a small explanation.
 
 ## 10) Constants (DRY)
 - `MIN_DELTA`: minimum X difference between resting and tap finger.
 - `SCROLL_THRESHOLD`: minimum motion to classify as scroll.
-- `COOLDOWN_MS`: 50ms.
-- `SUPPORTED_BROWSERS`: bundle IDs for Chrome and Safari.
+- `COOLDOWN_MS`: 25ms.
+- `TAP_REARM_MS`: 20ms.
+- `TAP_RELEASE_GRACE_MS`: 60ms.
+- `SUPPORTED_APPS`: bundle IDs for Chrome, Safari, Finder, Terminal.
 
 ## 11) Error Handling and Logging
 - Fail gracefully if permissions are not granted; no crashes.
@@ -105,3 +109,4 @@
 - Private API usage not App Store-safe.
 - Gesture ambiguity with scroll/other trackpad actions.
 - Hardware variability affecting threshold tuning.
+- Ctrl+Tab may not map to native tab switching in all supported apps (Finder/Terminal).
