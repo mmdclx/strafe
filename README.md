@@ -4,16 +4,16 @@
 
 **macOS only.** Designed for Apple Trackpads.
 
-Most trackpad gestures are designed for scrolling; **Strafe** is designed for speed. By leveraging a high-cadence "rest + tap" interaction, it allows you to fly through browser tabs with zero friction and absolute precision.
+Most trackpad gestures are designed for scrolling; **Strafe** is designed for speed. By leveraging a high-cadence "rest + tap" interaction, it lets you fly through browser tabs and other supported apps with zero friction and absolute precision.
 
 ---
 
 ## Features
 * **The Lateral Gesture:** Rest a finger to anchor your position and tap left or right with a second finger to switch tabs instantly.
-* **High-Performance Response:** Action latency is engineered to feel instantaneous, with a reaction time of less than 100ms.
-* **Rapid Cycling:** A minimum 50ms cooldown between taps prevents accidental rapid cycling while allowing for fast, repeated movements.
-* **End-to-End Wrap:** Seamlessly cycle from your final tab back to the start of the list.
-* **Native Integration:** Low-level support for Chrome and Safari with zero configuration required.
+* **High-Performance Response:** Action latency is engineered to feel instantaneous, targeting a reaction time under 100ms.
+* **Rapid Cycling:** A short cooldown (currently 25ms) prevents accidental rapid cycling while allowing fast, repeated movements.
+* **End-to-End Wrap:** Wrap-around behavior comes from the target app's default tab navigation (e.g., Ctrl+Tab).
+* **Native Integration:** Low-level trackpad capture with context-aware tab switching for supported apps (Chrome, Safari, Finder, Terminal).
 * **Minimalist Footprint:** A single-purpose menu bar utility that stays out of your way and runs until quit.
 
 ---
@@ -40,18 +40,18 @@ Strafe is context-aware. It only triggers when one of the following apps is fron
 ---
 
 ## Installation & Permissions
-Because Strafe interacts with your hardware at a low level and controls your browser, it requires specific macOS permissions to function:
+Because Strafe interacts with your hardware at a low level and controls your frontmost app, it requires specific macOS permissions to function:
 
-* **Accessibility:** Required to send tab-switch commands to Chrome and Safari via simulated keystrokes.
+* **Accessibility:** Required to send tab-switch commands via simulated keystrokes.
 * **Input Monitoring:** Required to observe raw trackpad touch data and detect the "rest + tap" gesture.
 
-Upon first launch, Strafe will prompt you to enable these in **System Settings > Privacy & Security**. If permissions are denied, the app will fail gracefully and prompt for activation.
+Upon first launch, Strafe will prompt you to enable Accessibility in **System Settings > Privacy & Security**. If permissions are denied, the app will fail gracefully and prompt for activation.
 
 ---
 
 ## Technical Details
 * **Gesture Engine:** Uses the private `OpenMultitouchSupport` package for raw trackpad touch data.
-* **Execution:** Injects standard keystrokes into the frontmost supported browser.
+* **Execution:** Injects standard keystrokes into the frontmost supported app (Ctrl+Tab / Ctrl+Shift+Tab).
 * **Constraint:** Only active when a supported app is frontmost; it will not steal focus from other apps.
 
 ---
@@ -77,7 +77,7 @@ Commands:
 
 ## Permissions
 
-Strafe uses Accessibility to inject keystrokes. On first launch, macOS will prompt you to grant Accessibility access. You may need to enable Strafe in System Settings > Privacy & Security > Accessibility.
+Strafe uses Accessibility to inject keystrokes. On first launch, macOS will prompt you to grant Accessibility access. You may need to enable Strafe in System Settings > Privacy & Security > Accessibility, and also grant Input Monitoring to capture raw trackpad touches.
 
 ## Notes
 
