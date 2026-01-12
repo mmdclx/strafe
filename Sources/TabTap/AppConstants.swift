@@ -7,7 +7,9 @@ enum AppConstants {
 
     static let supportedBrowsers: Set<String> = [
         "com.google.Chrome",
-        "com.apple.Safari"
+        "com.apple.Safari",
+        "com.apple.finder",
+        "com.apple.Terminal"
     ]
 
     static let cooldownSeconds: TimeInterval = 0.05
