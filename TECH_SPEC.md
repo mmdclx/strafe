@@ -32,6 +32,7 @@
 ### 5.1 GestureEngine
 - Consumes raw touch data and emits `GestureEvent.left` / `GestureEvent.right`.
 - Owns a small state machine for "rest + tap", a 25ms cooldown, and a short rearm window for rapid taps.
+- Triggers a short click suppression window after a successful gesture.
 
 ### 5.2 BrowserController
 - Sends `Ctrl+Tab` and `Ctrl+Shift+Tab` to the frontmost supported app.
@@ -94,6 +95,7 @@
 - `COOLDOWN_MS`: 25ms.
 - `TAP_REARM_MS`: 20ms.
 - `TAP_RELEASE_GRACE_MS`: 60ms.
+- `CLICK_SUPPRESSION_MS`: 120ms.
 - `SUPPORTED_APPS`: bundle IDs for Chrome, Safari, Finder, Terminal.
 
 ## 11) Error Handling and Logging

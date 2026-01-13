@@ -14,6 +14,7 @@ Strafe is a macOS menu bar app that enables a custom trackpad gesture (rest one 
   - Blue/red line from resting to candidate
   - Label includes `Trusted`, `Front`, `Resting`, `Tap`, `dX`, movement metrics, `Locked`, `Suppressed`, and touch phase abbreviations.
 - Gesture reliability improvements: cumulative travel tracking, scroll suppression window, tap candidate travel limits, and a fast tap rearm for rapid repeats.
+- Click suppression added to prevent accidental UI clicks after a successful gesture.
 - Allowlist expanded to include Finder and Terminal.
 
 ## Recent Fixes
@@ -40,14 +41,15 @@ Strafe is a macOS menu bar app that enables a custom trackpad gesture (rest one 
 - `make run` builds and launches the app; the Makefile embeds OpenMultitouchSupport and re-signs the app bundle.
 
 ## Known Behavior Issues
-- Finder/Terminal may not use `Ctrl+Tab` for tab switching; per-app key mappings are not implemented yet.
+- Per-app key mappings are not implemented (current behavior relies on `Ctrl+Tab`/`Ctrl+Shift+Tab`).
 - Threshold tuning may still need adjustment per trackpad hardware.
 
 ## Next Steps (Recommended)
-1) **Consider per-app shortcuts** for Finder/Terminal (e.g., Cmd+Shift+[ / ]).
-2) **Continue tuning thresholds** in `AppConstants.swift` based on real usage.
-3) **Optional cleanup**: remove or relocate the reliability PRD once the changes are stable.
+1) **Connect to Linear** and track roadmap + issues there as the source of truth.
+2) **Consider per-app shortcuts** if specific apps need different key bindings.
+3) **Continue tuning thresholds** in `AppConstants.swift` based on real usage.
 
 ## Notes
 - This is direct distribution only; private multitouch is not App Store safe.
 - Accessibility permission is required for keystroke injection.
+- Input Monitoring permission is required for trackpad touch capture.

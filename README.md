@@ -12,6 +12,7 @@ Most trackpad gestures are designed for scrolling; **Strafe** is designed for sp
 * **The Lateral Gesture:** Rest a finger to anchor your position and tap left or right with a second finger to switch tabs instantly.
 * **High-Performance Response:** Action latency is engineered to feel instantaneous, targeting a reaction time under 100ms.
 * **Rapid Cycling:** A short cooldown (currently 25ms) prevents accidental rapid cycling while allowing fast, repeated movements.
+* **Click Safety:** Successful gestures suppress accidental clicks for a brief window.
 * **End-to-End Wrap:** Wrap-around behavior comes from the target app's default tab navigation (e.g., Ctrl+Tab).
 * **Native Integration:** Low-level trackpad capture with context-aware tab switching for supported apps (Chrome, Safari, Finder, Terminal).
 * **Minimalist Footprint:** A single-purpose menu bar utility that stays out of your way and runs until quit.
@@ -52,6 +53,7 @@ Upon first launch, Strafe will prompt you to enable Accessibility in **System Se
 ## Technical Details
 * **Gesture Engine:** Uses the private `OpenMultitouchSupport` package for raw trackpad touch data.
 * **Execution:** Injects standard keystrokes into the frontmost supported app (Ctrl+Tab / Ctrl+Shift+Tab).
+* **Click Guard:** Drops left-clicks immediately after a successful gesture to avoid accidental UI activation.
 * **Constraint:** Only active when a supported app is frontmost; it will not steal focus from other apps.
 
 ---

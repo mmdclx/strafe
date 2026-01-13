@@ -33,6 +33,7 @@ A macOS menu bar app that enables a single, custom trackpad gesture for fast lef
 - Allow repeated taps while the resting finger remains down, producing repeated tab switches.
 - Distinguish intentional tap gestures from two-finger scrolls; do not trigger tab switches on scroll gestures.
 - Apply a minimum 25ms cooldown between taps to prevent accidental rapid cycling.
+- Suppress accidental click events immediately after a successful gesture.
 
 ### 6.2 App Targeting
 - Support Chrome, Safari, Finder, and Terminal only.
@@ -62,7 +63,7 @@ A macOS menu bar app that enables a single, custom trackpad gesture for fast lef
 
 ## 8) Technical Considerations (MVP)
 - Gesture capture: use OpenMultitouchSupport for raw trackpad touch data.
-- Browser control:
+- App control:
   - Send standard tab-navigation keystrokes to the frontmost supported app (e.g., Ctrl+Tab / Ctrl+Shift+Tab) and assume wrap-around behavior for MVP.
 - Process: single background menu bar app; no separate helper.
 ### 8.1 Libraries & Framework Approach (MVP)
@@ -78,6 +79,7 @@ A macOS menu bar app that enables a single, custom trackpad gesture for fast lef
 - When a supported app isn’t frontmost, do nothing (do not steal focus).
 - Finder/Terminal may require different key bindings for native tab switching.
 - Two-finger scroll should not trigger tab switching.
+- Tap gesture should not activate underlying UI clicks when it fires.
 
 ## 10) Security & Privacy
 - No data collection.
