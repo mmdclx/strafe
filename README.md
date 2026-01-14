@@ -77,6 +77,18 @@ Commands:
 - `make run` builds and opens the app
 - `make build CONFIG=release` for a release build
 
+## Branching and Releases
+
+Branching is intentionally simple:
+- `main` stays stable.
+- Releases are tagged on `main` as `vX.Y.Z`.
+- If needed, cut a short-lived `release/vX.Y.Z` branch from `main` for prep or hotfixes, then merge back and delete it after tagging.
+
+Lightweight release flow:
+- Update `CFBundleShortVersionString` and `CFBundleVersion` in `Resources/Info.plist`.
+- Build a release binary (`make build CONFIG=release`).
+- Tag the release on `main` (`vX.Y.Z`).
+
 ## Permissions
 
 Strafe uses Accessibility to inject keystrokes. On first launch, macOS will prompt you to grant Accessibility access. You may need to enable Strafe in System Settings > Privacy & Security > Accessibility, and also grant Input Monitoring to capture raw trackpad touches.

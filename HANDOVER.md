@@ -41,13 +41,9 @@ Strafe is a macOS menu bar app that enables a custom trackpad gesture (rest one 
 - `make run` builds and launches the app; the Makefile embeds OpenMultitouchSupport and re-signs the app bundle.
 
 ## Known Behavior Issues
-- Per-app key mappings are not implemented (current behavior relies on `Ctrl+Tab`/`Ctrl+Shift+Tab`).
-- Threshold tuning may still need adjustment per trackpad hardware.
 
 ## Next Steps (Recommended)
 1) **Connect to Linear** and track roadmap + issues there as the source of truth.
-2) **Consider per-app shortcuts** if specific apps need different key bindings.
-3) **Continue tuning thresholds** in `AppConstants.swift` based on real usage.
 
 ## Notes
 - This is direct distribution only; private multitouch is not App Store safe.
