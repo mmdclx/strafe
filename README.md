@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/assets/strafe_logo.png" width="420" alt="Strafe logo">
+</p>
+
 # Strafe v0.1
 
 ### Lateral tab navigation at the speed of thought.

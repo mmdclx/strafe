@@ -4,8 +4,9 @@
 - Always read this file when starting work in this repo.
 
 ## Linear Is the Source of Truth
-- All work should be tied to a Linear issue in the "Strafe — Gesture Tab Switching MVP" project.
-- If no issue is specified, ask for one (or propose creating it).
+- Most work should be tied to a Linear issue in the "Strafe — Gesture Tab Switching MVP" project.
+- Small housekeeping tasks (e.g., README tweaks, doc moves, asset adds) can be done without a Linear issue.
+- If it's unclear whether a task is minor, ask before proceeding.
 - Keep the issue updated as you work: status, findings, and next steps.
 
 ## New Ideas

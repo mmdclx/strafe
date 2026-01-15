@@ -35,7 +35,7 @@ Strafe is a macOS menu bar app that enables a custom trackpad gesture (rest one 
 - `Sources/Strafe/Debug/DebugWindowController.swift` — debug overlay and label string.
 - `Sources/Strafe/AppDelegate.swift` — menu bar setup, Debug window entry.
 - `Sources/Strafe/Protocols.swift` — protocols now `@MainActor` to satisfy Swift 6 concurrency checks.
-- `PRD.md` and `TECH_SPEC.md` — updated to mention OpenMultitouchSupport.
+- `docs/PRD.md` and `docs/TECH_SPEC.md` — updated to mention OpenMultitouchSupport.
 
 ## Current Build Status
 - `make run` builds and launches the app; the Makefile embeds OpenMultitouchSupport and re-signs the app bundle.
