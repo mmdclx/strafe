@@ -9,12 +9,18 @@ CONFIG ?= debug
 BINARY_PATH = $(firstword $(wildcard .build/$(CONFIG)/$(APP_NAME) .build/*/$(CONFIG)/$(APP_NAME)))
 FRAMEWORK_NAME := OpenMultitouchSupportXCF.framework
 FRAMEWORK_PATH = $(firstword $(wildcard .build/$(CONFIG)/$(FRAMEWORK_NAME) .build/*/$(CONFIG)/$(FRAMEWORK_NAME)))
+ARTIFACT_DIR := .build/artifacts/openmultitouchsupport/OpenMultitouchSupportXCF
+ARTIFACT_INFO := $(ARTIFACT_DIR)/OpenMultitouchSupportXCF.xcframework/Info.plist
 
 .PHONY: build run clean
 
 build:
 	@mkdir -p $(MACOS_DIR) $(RES_DIR) $(FRAMEWORKS_DIR)
 	@cp $(INFO_PLIST) $(APP_BUNDLE)/Contents/Info.plist
+	@if [ -d "$(ARTIFACT_DIR)" ] && [ ! -f "$(ARTIFACT_INFO)" ]; then \
+		echo "Cleaning incomplete OpenMultitouchSupport artifact..."; \
+		rm -rf "$(ARTIFACT_DIR)"; \
+	fi
 	swift build -c $(CONFIG)
 	@if [ -z "$(BINARY_PATH)" ]; then \
 		echo "Error: build product not found in .build. Try: swift build -c $(CONFIG) --show-bin-path"; \
