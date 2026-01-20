@@ -1,4 +1,5 @@
 import AppKit
+import QuartzCore
 
 @MainActor
 final class DebugWindowController: NSWindowController, NSWindowDelegate {
@@ -30,13 +31,8 @@ final class DebugWindowController: NSWindowController, NSWindowDelegate {
     }
 
     func handle(_ event: GestureEvent) {
-        guard window?.isKeyWindow == true else { return }
-        switch event {
-        case .left:
-            flashView.flashLeft()
-        case .right:
-            flashView.flashRight()
-        }
+        guard window?.isVisible == true else { return }
+        flashView.trigger(event)
     }
 
     func handle(debugState: GestureDebugState, frontmostBundleId: String?, isTrusted: Bool) {
@@ -47,9 +43,8 @@ final class DebugWindowController: NSWindowController, NSWindowDelegate {
 }
 
 private final class DebugFlashView: NSView {
-    private let leftOverlay = NSView()
-    private let rightOverlay = NSView()
     private let gestureOverlay = DebugGestureOverlayView()
+    private let triggerIndicator = DebugTriggerIndicatorView()
     private let coordsLabel = NSTextField(labelWithString: "Callbacks: 0 | Touches: 0")
     private var callbackCount: Int = 0
     private var frontmostBundleId: String?
@@ -61,11 +56,9 @@ private final class DebugFlashView: NSView {
         wantsLayer = true
         layer?.backgroundColor = NSColor.windowBackgroundColor.cgColor
 
-        configureOverlay(leftOverlay, color: NSColor.systemBlue.withAlphaComponent(0.55))
-        configureOverlay(rightOverlay, color: NSColor.systemRed.withAlphaComponent(0.55))
-
         gestureOverlay.wantsLayer = true
         addSubview(gestureOverlay)
+        addSubview(triggerIndicator)
 
         coordsLabel.font = NSFont.monospacedSystemFont(ofSize: 11, weight: .regular)
         coordsLabel.textColor = NSColor.secondaryLabelColor
@@ -82,20 +75,20 @@ private final class DebugFlashView: NSView {
 
     override func layout() {
         super.layout()
-        let halfWidth = bounds.width / 2
-        leftOverlay.frame = NSRect(x: 0, y: 0, width: halfWidth, height: bounds.height)
-        rightOverlay.frame = NSRect(x: halfWidth, y: 0, width: bounds.width - halfWidth, height: bounds.height)
         gestureOverlay.frame = bounds
+        let indicatorSize = CGSize(width: 48, height: 28)
+        triggerIndicator.frame = NSRect(
+            x: (bounds.width - indicatorSize.width) / 2,
+            y: bounds.height - indicatorSize.height - 12,
+            width: indicatorSize.width,
+            height: indicatorSize.height
+        )
         let labelHeight = min(bounds.height * 0.3, 120)
         coordsLabel.frame = NSRect(x: 12, y: 8, width: bounds.width - 24, height: labelHeight)
     }
 
-    func flashLeft() {
-        flash(view: leftOverlay)
-    }
-
-    func flashRight() {
-        flash(view: rightOverlay)
+    func trigger(_ event: GestureEvent) {
+        triggerIndicator.trigger(event)
     }
 
     func updateDebugState(_ state: GestureDebugState) {
@@ -110,21 +103,6 @@ private final class DebugFlashView: NSView {
         self.isTrusted = isTrusted
         if let state = lastState {
             coordsLabel.stringValue = formatCoords(state)
-        }
-    }
-
-    private func configureOverlay(_ view: NSView, color: NSColor) {
-        view.wantsLayer = true
-        view.layer?.backgroundColor = color.cgColor
-        view.alphaValue = 0
-        addSubview(view)
-    }
-
-    private func flash(view: NSView) {
-        view.alphaValue = 1
-        NSAnimationContext.runAnimationGroup { context in
-            context.duration = 1.0
-            view.animator().alphaValue = 0
         }
     }
 
@@ -149,6 +127,82 @@ private final class DebugFlashView: NSView {
             .map { "\($0.id):\($0.phase.rawValue.prefix(3))" }
             .joined(separator: " ")
         return "\(counts)\n\(context)\n\(summary)\n\(timing)\n\(phases)"
+    }
+}
+
+private final class DebugTriggerIndicatorView: NSView {
+    private let iconView = NSImageView()
+    private var hideWorkItem: DispatchWorkItem?
+    private let fadeDelay: TimeInterval = 0.05
+    private let fadeDuration: CFTimeInterval = 0.25
+    private let fillColor = NSColor(calibratedWhite: 0.85, alpha: 0.95)
+    private let iconColor = NSColor(calibratedWhite: 0.35, alpha: 1.0)
+    private let borderColor = NSColor(calibratedWhite: 0.7, alpha: 1.0)
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        wantsLayer = true
+        layer?.cornerRadius = 8
+        layer?.borderWidth = 1
+        layer?.backgroundColor = fillColor.cgColor
+        layer?.borderColor = borderColor.cgColor
+        layer?.opacity = 0
+
+        iconView.imageScaling = .scaleProportionallyUpOrDown
+        iconView.symbolConfiguration = NSImage.SymbolConfiguration(pointSize: 14, weight: .semibold)
+        addSubview(iconView)
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    override func layout() {
+        super.layout()
+        let iconSize = CGSize(width: 16, height: 16)
+        iconView.frame = NSRect(
+            x: (bounds.width - iconSize.width) / 2,
+            y: (bounds.height - iconSize.height) / 2,
+            width: iconSize.width,
+            height: iconSize.height
+        )
+    }
+
+    func trigger(_ event: GestureEvent) {
+        let symbolName = event == .left ? "chevron.left" : "chevron.right"
+        iconView.image = NSImage(systemSymbolName: symbolName, accessibilityDescription: nil)
+        iconView.contentTintColor = iconColor
+        layer?.borderColor = borderColor.cgColor
+
+        hideWorkItem?.cancel()
+        hideWorkItem = nil
+        layer?.removeAnimation(forKey: "fade")
+        layer?.removeAnimation(forKey: "pulse")
+        layer?.opacity = 1
+
+        let pulse = CABasicAnimation(keyPath: "transform.scale")
+        pulse.fromValue = 0.9
+        pulse.toValue = 1.0
+        pulse.duration = 0.08
+        pulse.timingFunction = CAMediaTimingFunction(name: .easeOut)
+        layer?.add(pulse, forKey: "pulse")
+
+        let workItem = DispatchWorkItem { [weak self] in
+            self?.fadeOut()
+        }
+        hideWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + fadeDelay, execute: workItem)
+    }
+
+    private func fadeOut() {
+        guard let layer else { return }
+        layer.opacity = 0
+        let fade = CABasicAnimation(keyPath: "opacity")
+        fade.fromValue = 1
+        fade.toValue = 0
+        fade.duration = fadeDuration
+        fade.timingFunction = CAMediaTimingFunction(name: .easeOut)
+        layer.add(fade, forKey: "fade")
     }
 }
 

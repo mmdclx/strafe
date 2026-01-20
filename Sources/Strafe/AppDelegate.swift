@@ -22,9 +22,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         gestureEngine.onGesture = { [weak self] event in
             guard let self else { return }
-            self.debugWindowController?.handle(event)
-            if self.eventRouter.handle(event) {
+            let didNavigate = self.eventRouter.handle(event)
+            if didNavigate {
+                self.debugWindowController?.handle(event)
                 self.clickSuppressor.suppressClicks(for: AppConstants.clickSuppressionSeconds)
+                return
+            }
+
+            if self.permissionService.isTrusted(),
+               self.frontmostQuery.frontmostBundleId() == AppConstants.bundleId,
+               self.debugWindowController?.window?.isKeyWindow == true {
+                self.debugWindowController?.handle(event)
             }
         }
         gestureEngine.onDebugState = { [weak self] state in
