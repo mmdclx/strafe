@@ -83,6 +83,17 @@ Commands:
 - `make clean` removes `build/` output
 - `swift package clean` clears SwiftPM artifacts in `.build` if you want a full rebuild
 
+## Development Workflow (Feature Checklist)
+
+- Start from a clean tree: `git status -s`
+- Create/confirm a Linear issue and set it In Progress
+- Branch from `main` with a short-lived feature branch
+- Implement the change and validate locally (`make run`)
+- Commit the change with a clear message
+- Push the branch and merge to `main`
+- Update the Linear issue with findings and mark Done
+- Optionally delete the feature branch
+
 ## Branching and Releases
 
 Branching is intentionally simple:
