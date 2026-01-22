@@ -80,6 +80,8 @@ Commands:
 - `make build` builds `build/Strafe.app`
 - `make run` builds and opens the app
 - `make build CONFIG=release` for a release build
+- `make clean` removes `build/` output
+- `swift package clean` clears SwiftPM artifacts in `.build` if you want a full rebuild
 
 ## Branching and Releases
 
