@@ -5,29 +5,28 @@ enum MenuBarIcon {
         let image = NSImage(size: NSSize(width: size, height: size))
         image.lockFocus()
 
-        let path = NSBezierPath()
-        path.lineWidth = 1.8
-        path.lineCapStyle = .round
-        path.lineJoinStyle = .round
+        let barWidth = size * 0.78
+        let barHeight = max(2, size * 0.16)
+        let barRadius = barHeight / 2
+        let gap = barHeight * 0.9
+        let totalHeight = barHeight * 3 + gap * 2
+        let startY = (size - totalHeight) / 2
+        let startX = (size - barWidth) / 2
 
-        let leftTop = NSPoint(x: size * 0.58, y: size * 0.80)
-        let leftMid = NSPoint(x: size * 0.38, y: size * 0.50)
-        let leftBottom = NSPoint(x: size * 0.58, y: size * 0.20)
+        let composite = NSBezierPath()
+        for index in 0..<3 {
+            let rect = NSRect(
+                x: startX,
+                y: startY + CGFloat(index) * (barHeight + gap),
+                width: barWidth,
+                height: barHeight
+            )
+            let bar = NSBezierPath(roundedRect: rect, xRadius: barRadius, yRadius: barRadius)
+            composite.append(bar)
+        }
 
-        let rightTop = NSPoint(x: size * 0.42, y: size * 0.80)
-        let rightMid = NSPoint(x: size * 0.62, y: size * 0.50)
-        let rightBottom = NSPoint(x: size * 0.42, y: size * 0.20)
-
-        path.move(to: leftTop)
-        path.line(to: leftMid)
-        path.line(to: leftBottom)
-
-        path.move(to: rightTop)
-        path.line(to: rightMid)
-        path.line(to: rightBottom)
-
-        NSColor.black.setStroke()
-        path.stroke()
+        NSColor.black.setFill()
+        composite.fill()
 
         image.unlockFocus()
         image.isTemplate = true
