@@ -29,6 +29,9 @@ build:
 	fi; \
 	BINARY_PATH="$$BIN_DIR/$(APP_NAME)"; \
 	if [ ! -f "$$BINARY_PATH" ]; then \
+		swift build -c $(CONFIG); \
+	fi; \
+	if [ ! -f "$$BINARY_PATH" ]; then \
 		echo "Error: build product not found at $$BINARY_PATH"; \
 		exit 1; \
 	fi; \
