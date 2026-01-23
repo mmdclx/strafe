@@ -5,28 +5,31 @@ enum MenuBarIcon {
         let image = NSImage(size: NSSize(width: size, height: size))
         image.lockFocus()
 
-        let barWidth = size * 0.78
-        let barHeight = max(2, size * 0.16)
-        let barRadius = barHeight / 2
-        let gap = barHeight * 0.9
-        let totalHeight = barHeight * 3 + gap * 2
-        let startY = (size - totalHeight) / 2
-        let startX = (size - barWidth) / 2
+        let sourceWidth: CGFloat = 18
+        let sourceHeight: CGFloat = 11
+        let scale = (size * 0.9) / sourceWidth
+        let drawWidth = sourceWidth * scale
+        let drawHeight = sourceHeight * scale
+        let originX = (size - drawWidth) / 2
+        let originY = (size - drawHeight) / 2
 
-        let composite = NSBezierPath()
-        for index in 0..<3 {
-            let rect = NSRect(
-                x: startX,
-                y: startY + CGFloat(index) * (barHeight + gap),
-                width: barWidth,
-                height: barHeight
-            )
-            let bar = NSBezierPath(roundedRect: rect, xRadius: barRadius, yRadius: barRadius)
-            composite.append(bar)
+        let lines: [(CGFloat, CGFloat, CGFloat)] = [
+            (7.0498, 16.0498, 1.05005),
+            (4.0498, 13.0498, 5.05005),
+            (1.0498, 10.0498, 9.05005)
+        ]
+
+        let path = NSBezierPath()
+        path.lineWidth = 2.1 * scale
+        path.lineCapStyle = .round
+        for (x1, x2, y) in lines {
+            let yFlipped = sourceHeight - y
+            path.move(to: NSPoint(x: originX + x1 * scale, y: originY + yFlipped * scale))
+            path.line(to: NSPoint(x: originX + x2 * scale, y: originY + yFlipped * scale))
         }
 
-        NSColor.black.setFill()
-        composite.fill()
+        NSColor.black.setStroke()
+        path.stroke()
 
         image.unlockFocus()
         image.isTemplate = true
