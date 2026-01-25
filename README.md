@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/strafe_logo.png" width="420" alt="Strafe logo">
+  <img src="docs/assets/logo_with_title.svg" width="420" alt="Strafe logo">
 </p>
 
 # Strafe v0.1
