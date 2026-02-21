@@ -19,6 +19,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         setupStatusItem()
         permissionService.promptIfNeeded()
         clickSuppressor.start()
+        if PerformanceMetrics.isEnabled {
+            Log.info(Log.performance, "Performance metrics enabled (window: \(AppConstants.performanceMetricsLogIntervalSeconds)s)")
+        }
 
         gestureEngine.onGesture = { [weak self] event in
             guard let self else { return }

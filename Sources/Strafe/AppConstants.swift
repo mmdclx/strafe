@@ -35,4 +35,7 @@ enum AppConstants {
     // Scroll suppression
     static let scrollMovementThreshold: Float = 0.08 // Travel distance that marks a touch as scrolling.
     static let scrollSuppressionSeconds: TimeInterval = 0.20 // Suppression window after scroll-like movement.
+
+    // Performance instrumentation
+    static let performanceMetricsLogIntervalSeconds: TimeInterval = 10 // Aggregation window for perf metric logs.
 }

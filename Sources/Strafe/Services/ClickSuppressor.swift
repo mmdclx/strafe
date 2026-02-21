@@ -86,6 +86,7 @@ final class ClickSuppressor {
     }
 
     func suppressClicks(for duration: TimeInterval) {
+        PerformanceMetrics.shared.recordClickSuppressorInvocation()
         let until = ProcessInfo.processInfo.systemUptime + duration
         stateLock.lock()
         suppressUntil = max(suppressUntil, until)
@@ -104,6 +105,11 @@ final class ClickSuppressor {
         type: CGEventType,
         event: CGEvent
     ) -> Unmanaged<CGEvent>? {
+        let startedAt = PerformanceMetrics.startTimestamp()
+        defer {
+            PerformanceMetrics.shared.recordClickSuppressorHandleEvent(startedAt: startedAt)
+        }
+
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
             stateLock.lock()
             let tap = eventTap
@@ -117,8 +123,10 @@ final class ClickSuppressor {
         if type == .leftMouseDown || type == .leftMouseUp || type == .leftMouseDragged {
             let now = ProcessInfo.processInfo.systemUptime
             if shouldSuppress(now: now) {
+                PerformanceMetrics.shared.recordClickSuppressorEvent(suppressed: true)
                 return nil
             }
+            PerformanceMetrics.shared.recordClickSuppressorEvent(suppressed: false)
         }
 
         return Unmanaged.passUnretained(event)

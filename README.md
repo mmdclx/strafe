@@ -83,6 +83,24 @@ Commands:
 - `make clean` removes `build/` output
 - `swift package clean` clears SwiftPM artifacts in `.build` if you want a full rebuild
 
+## Performance Metrics (MM-63)
+
+Strafe includes lightweight aggregated perf instrumentation to support gesture profiling.
+
+- Debug builds (`make run`) emit a `performance` log line every 10s.
+- Release builds keep metrics off unless `STRAFE_PERF_METRICS=1`.
+- Metrics include callback/query rates and per-path timing summaries:
+  - touch callback frequency and sample volume
+  - gesture candidate evaluation count
+  - successful gesture triggers
+  - click suppressor invocations and dropped click events
+  - frontmost app query frequency
+  - avg/max timing for touch mapping, classifier processing, frontmost query, and click event handling
+
+To capture in release for local profiling:
+- `make build CONFIG=release`
+- `STRAFE_PERF_METRICS=1 build/Strafe.app/Contents/MacOS/Strafe`
+
 ## Development Workflow (Feature Checklist)
 
 - Start from a clean tree: `git status -s`

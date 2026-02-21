@@ -269,6 +269,7 @@ final class GestureClassifier {
     }
 
     private func shouldTriggerTap(candidate: TapCandidate, now: TimeInterval, currentIds: Set<Int>) -> Bool {
+        PerformanceMetrics.shared.recordGestureCandidateEvaluation()
         guard let candidateInfo = activeTouches[candidate.id] else { return false }
         guard candidateInfo.travel <= CGFloat(AppConstants.tapCandidateMaxTravel) else { return false }
         guard now - lastTriggerTime >= AppConstants.cooldownSeconds else { return false }

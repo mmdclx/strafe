@@ -5,6 +5,7 @@ enum Log {
     static let gesture = Logger(subsystem: AppConstants.bundleId, category: "gesture")
     static let permissions = Logger(subsystem: AppConstants.bundleId, category: "permissions")
     static let navigation = Logger(subsystem: AppConstants.bundleId, category: "navigation")
+    static let performance = Logger(subsystem: AppConstants.bundleId, category: "performance")
 
     static func debug(_ logger: Logger, _ message: String) {
         #if DEBUG
