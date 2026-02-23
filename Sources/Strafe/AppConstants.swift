@@ -38,4 +38,5 @@ enum AppConstants {
 
     // Performance instrumentation
     static let performanceMetricsLogIntervalSeconds: TimeInterval = 10 // Aggregation window for perf metric logs.
+    static let debugOverlayUpdateIntervalSeconds: TimeInterval = 1.0 / 30.0 // Throttle debug overlay refreshes to reduce main-thread churn.
 }

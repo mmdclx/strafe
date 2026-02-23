@@ -14,6 +14,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let gestureEngine = MultitouchGestureEngine()
     private var debugWindowController: DebugWindowController?
     private var statusItem: NSStatusItem?
+    private var nextDebugOverlayUpdateAt: TimeInterval = 0
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupStatusItem()
@@ -32,17 +33,28 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 return
             }
 
+            guard let debugWindowController = self.debugWindowController,
+                  debugWindowController.window?.isKeyWindow == true else {
+                return
+            }
             if self.permissionService.isTrusted(),
-               self.frontmostQuery.frontmostBundleId() == AppConstants.bundleId,
-               self.debugWindowController?.window?.isKeyWindow == true {
-                self.debugWindowController?.handle(event)
+               self.frontmostQuery.frontmostBundleId() == AppConstants.bundleId {
+                debugWindowController.handle(event)
             }
         }
         gestureEngine.onDebugState = { [weak self] state in
             guard let self else { return }
+            guard let debugWindowController = self.debugWindowController,
+                  debugWindowController.window?.isVisible == true else {
+                return
+            }
+            let now = ProcessInfo.processInfo.systemUptime
+            guard now >= self.nextDebugOverlayUpdateAt else { return }
+            self.nextDebugOverlayUpdateAt = now + AppConstants.debugOverlayUpdateIntervalSeconds
+
             let frontmost = self.frontmostQuery.frontmostBundleId()
             let trusted = self.permissionService.isTrusted()
-            self.debugWindowController?.handle(debugState: state, frontmostBundleId: frontmost, isTrusted: trusted)
+            debugWindowController.handle(debugState: state, frontmostBundleId: frontmost, isTrusted: trusted)
         }
         gestureEngine.start()
 
