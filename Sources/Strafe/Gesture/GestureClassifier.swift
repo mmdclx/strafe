@@ -90,12 +90,13 @@ final class GestureClassifier {
             return (nil, includeDebugState ? debugState(now: now) : nil)
         }
 
-        let previousIds = Set(activeTouches.keys)
-        let currentIds = Set(samples.map { $0.id })
-        let newIds = currentIds.subtracting(previousIds)
-        let endedIds = previousIds.subtracting(currentIds)
+        var currentIds = Set<Int>()
+        currentIds.reserveCapacity(samples.count)
+        var newIds: [Int] = []
+        newIds.reserveCapacity(samples.count)
 
         for sample in samples {
+            currentIds.insert(sample.id)
             if var info = activeTouches[sample.id] {
                 let travel = distance(sample.position, info.startPosition)
                 if travel > CGFloat(AppConstants.restingMovementThreshold) {
@@ -124,16 +125,27 @@ final class GestureClassifier {
                     movedBeyondRest: false,
                     movedBeyondScroll: false
                 )
+                newIds.append(sample.id)
             }
         }
 
+        var endedIds: [Int] = []
+        endedIds.reserveCapacity(max(activeTouches.count - currentIds.count, 0))
+        for id in activeTouches.keys where !currentIds.contains(id) {
+            endedIds.append(id)
+        }
+
         if currentIds.count >= 2 {
-            let movingTouches = activeTouches.values.filter { $0.movedBeyondScroll }.count
-            if movingTouches >= 2 {
-                scrollSuppressedUntil = now + AppConstants.scrollSuppressionSeconds
-                tapCandidate = nil
-                if tapLocked {
-                    tapRearmAt = scrollSuppressedUntil
+            var movingTouches = 0
+            for info in activeTouches.values where info.movedBeyondScroll {
+                movingTouches += 1
+                if movingTouches >= 2 {
+                    scrollSuppressedUntil = now + AppConstants.scrollSuppressionSeconds
+                    tapCandidate = nil
+                    if tapLocked {
+                        tapRearmAt = scrollSuppressedUntil
+                    }
+                    break
                 }
             }
         }
@@ -148,13 +160,11 @@ final class GestureClassifier {
         }
 
         if restingTouchId == nil {
-            if let stable = activeTouches.values
-                .filter({ $0.phase.isStable })
-                .min(by: { $0.downTime < $1.downTime }) {
+            if let stable = oldestStableTouch() {
                 restingTouchId = stable.id
                 restingPosition = stable.position
                 restingDownTime = stable.downTime
-            } else if let earliest = activeTouches.values.min(by: { $0.downTime < $1.downTime }) {
+            } else if let earliest = oldestTouch() {
                 restingTouchId = earliest.id
                 restingPosition = earliest.position
                 restingDownTime = earliest.downTime
@@ -245,13 +255,17 @@ final class GestureClassifier {
         return (triggeredEvent, includeDebugState ? debugState(now: now) : nil)
     }
 
-    private func selectCandidate(restingId: Int, newIds: Set<Int>) -> TouchInfo? {
-        if let newCandidate = newIds
-            .filter({ $0 != restingId })
-            .compactMap({ activeTouches[$0] })
-            .filter({ !$0.movedBeyondRest })
-            .sorted(by: { $0.downTime > $1.downTime })
-            .first {
+    private func selectCandidate(restingId: Int, newIds: [Int]) -> TouchInfo? {
+        var newCandidate: TouchInfo?
+        for id in newIds where id != restingId {
+            guard let info = activeTouches[id], !info.movedBeyondRest else { continue }
+            if let newCandidate, info.downTime <= newCandidate.downTime {
+                continue
+            }
+            newCandidate = info
+        }
+
+        if let newCandidate {
             if let restingDownTime {
                 let minDownTime = restingDownTime + AppConstants.tapMinDelaySeconds
                 if newCandidate.downTime < minDownTime {
@@ -261,11 +275,15 @@ final class GestureClassifier {
             return newCandidate
         }
 
-        return activeTouches.values
-            .filter { $0.id != restingId && $0.phase.isBeginning }
-            .filter { !$0.movedBeyondRest }
-            .sorted(by: { $0.downTime > $1.downTime })
-            .first
+        var fallbackCandidate: TouchInfo?
+        for info in activeTouches.values {
+            guard info.id != restingId, info.phase.isBeginning, !info.movedBeyondRest else { continue }
+            if let fallbackCandidate, info.downTime <= fallbackCandidate.downTime {
+                continue
+            }
+            fallbackCandidate = info
+        }
+        return fallbackCandidate
     }
 
     private func shouldTriggerTap(candidate: TapCandidate, now: TimeInterval, currentIds: Set<Int>) -> Bool {
@@ -347,6 +365,28 @@ final class GestureClassifier {
 
     private func closestTouch(to position: CGPoint) -> TouchInfo? {
         activeTouches.values.min(by: { distance($0.position, position) < distance($1.position, position) })
+    }
+
+    private func oldestStableTouch() -> TouchInfo? {
+        var result: TouchInfo?
+        for info in activeTouches.values where info.phase.isStable {
+            if let result, info.downTime >= result.downTime {
+                continue
+            }
+            result = info
+        }
+        return result
+    }
+
+    private func oldestTouch() -> TouchInfo? {
+        var result: TouchInfo?
+        for info in activeTouches.values {
+            if let result, info.downTime >= result.downTime {
+                continue
+            }
+            result = info
+        }
+        return result
     }
 
     private func distance(_ a: CGPoint, _ b: CGPoint) -> CGFloat {
