@@ -24,6 +24,7 @@ final class MultitouchGestureEngine: GestureDetecting {
             for await touches in manager.touchDataStream {
                 PerformanceMetrics.shared.recordTouchCallback(sampleCount: touches.count)
                 let now = ProcessInfo.processInfo.systemUptime
+                let shouldEmitDebugState = self.onDebugState != nil
                 let touchMapStart = PerformanceMetrics.startTimestamp()
                 let samples = touches.compactMap { touch -> TouchSample? in
                     guard let phase = TouchPhase(touch.state) else { return nil }
@@ -35,13 +36,15 @@ final class MultitouchGestureEngine: GestureDetecting {
                 }
                 PerformanceMetrics.shared.recordTouchConversion(startedAt: touchMapStart)
                 let classifierStart = PerformanceMetrics.startTimestamp()
-                let result = self.classifier.process(samples: samples, now: now)
+                let result = self.classifier.process(samples: samples, now: now, includeDebugState: shouldEmitDebugState)
                 PerformanceMetrics.shared.recordClassifierProcess(startedAt: classifierStart)
                 if let event = result.0 {
                     PerformanceMetrics.shared.recordGestureTrigger()
                     self.onGesture?(event)
                 }
-                self.onDebugState?(result.1)
+                if let debugState = result.1 {
+                    self.onDebugState?(debugState)
+                }
             }
         }
 

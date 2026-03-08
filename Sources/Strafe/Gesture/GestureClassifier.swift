@@ -84,10 +84,10 @@ final class GestureClassifier {
     private var tapRearmAt: TimeInterval?
     private var restingMissingSince: TimeInterval?
 
-    func process(samples: [TouchSample], now: TimeInterval) -> (GestureEvent?, GestureDebugState) {
+    func process(samples: [TouchSample], now: TimeInterval, includeDebugState: Bool) -> (GestureEvent?, GestureDebugState?) {
         if samples.isEmpty {
             resetState()
-            return (nil, debugState(now: now))
+            return (nil, includeDebugState ? debugState(now: now) : nil)
         }
 
         let previousIds = Set(activeTouches.keys)
@@ -242,7 +242,7 @@ final class GestureClassifier {
             scheduleTapRearm(now: now, currentIds: currentIds)
         }
 
-        return (triggeredEvent, debugState(now: now))
+        return (triggeredEvent, includeDebugState ? debugState(now: now) : nil)
     }
 
     private func selectCandidate(restingId: Int, newIds: Set<Int>) -> TouchInfo? {

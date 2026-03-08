@@ -4,6 +4,7 @@ import QuartzCore
 @MainActor
 final class DebugWindowController: NSWindowController, NSWindowDelegate {
     private let flashView = DebugFlashView()
+    var onVisibilityChanged: ((Bool) -> Void)?
 
     init() {
         let window = NSWindow(
@@ -28,6 +29,11 @@ final class DebugWindowController: NSWindowController, NSWindowDelegate {
     func show() {
         window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
+        onVisibilityChanged?(true)
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        onVisibilityChanged?(false)
     }
 
     func handle(_ event: GestureEvent) {
