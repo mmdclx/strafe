@@ -3,8 +3,12 @@ import CoreGraphics
 
 final class ClickSuppressor {
     private let stateLock = NSLock()
+    private let disableQueue = DispatchQueue(label: "Strafe.ClickSuppressor.Disable")
     private var suppressUntil: TimeInterval = 0
     private var eventTap: CFMachPort?
+    private var isTapEnabled = false
+    private var scheduledDisable: DispatchWorkItem?
+    private var scheduledDisableTarget: TimeInterval = 0
     private var runLoopSource: CFRunLoopSource?
     private var runLoop: CFRunLoop?
     private var tapThread: Thread?
@@ -54,10 +58,11 @@ final class ClickSuppressor {
         let source = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, tap, 0)
         let currentRunLoop = CFRunLoopGetCurrent()
         CFRunLoopAddSource(currentRunLoop, source, .commonModes)
-        CGEvent.tapEnable(tap: tap, enable: true)
+        CGEvent.tapEnable(tap: tap, enable: false)
 
         stateLock.lock()
         eventTap = tap
+        isTapEnabled = false
         runLoopSource = source
         runLoop = currentRunLoop
         stateLock.unlock()
@@ -70,11 +75,17 @@ final class ClickSuppressor {
         let tap = eventTap
         let source = runLoopSource
         let loop = runLoop
+        let scheduledDisable = scheduledDisable
         eventTap = nil
+        isTapEnabled = false
+        suppressUntil = 0
+        self.scheduledDisable = nil
+        scheduledDisableTarget = 0
         runLoopSource = nil
         runLoop = nil
         tapThread = nil
         stateLock.unlock()
+        scheduledDisable?.cancel()
 
         if let tap {
             CGEvent.tapEnable(tap: tap, enable: false)
@@ -87,17 +98,57 @@ final class ClickSuppressor {
 
     func suppressClicks(for duration: TimeInterval) {
         PerformanceMetrics.shared.recordClickSuppressorInvocation()
-        let until = ProcessInfo.processInfo.systemUptime + duration
+        let now = ProcessInfo.processInfo.systemUptime
+        let requestedUntil = now + duration
+        var tapToEnable: CFMachPort?
+        var targetUntil: TimeInterval = 0
+        var disableWorkItem: DispatchWorkItem?
         stateLock.lock()
-        suppressUntil = max(suppressUntil, until)
+        suppressUntil = max(suppressUntil, requestedUntil)
+        targetUntil = suppressUntil
+        scheduledDisable?.cancel()
+        let workItem = DispatchWorkItem { [weak self] in
+            self?.disableTapIfExpired(targetUntil: targetUntil)
+        }
+        scheduledDisable = workItem
+        scheduledDisableTarget = targetUntil
+        disableWorkItem = workItem
+        if !isTapEnabled, let tap = eventTap {
+            isTapEnabled = true
+            tapToEnable = tap
+        }
         stateLock.unlock()
+        if let tapToEnable {
+            CGEvent.tapEnable(tap: tapToEnable, enable: true)
+        }
+        if let disableWorkItem {
+            let delay = max(targetUntil - now, 0)
+            disableQueue.asyncAfter(deadline: .now() + delay, execute: disableWorkItem)
+        }
     }
 
-    private func shouldSuppress(now: TimeInterval) -> Bool {
+    private func disableTapIfExpired(targetUntil: TimeInterval) {
+        var tapToDisable: CFMachPort?
+        let now = ProcessInfo.processInfo.systemUptime
         stateLock.lock()
-        let suppress = now < suppressUntil
+        guard scheduledDisableTarget == targetUntil else {
+            stateLock.unlock()
+            return
+        }
+        guard now >= suppressUntil else {
+            stateLock.unlock()
+            return
+        }
+        scheduledDisable = nil
+        scheduledDisableTarget = 0
+        if isTapEnabled {
+            isTapEnabled = false
+            tapToDisable = eventTap
+        }
         stateLock.unlock()
-        return suppress
+        if let tapToDisable {
+            CGEvent.tapEnable(tap: tapToDisable, enable: false)
+        }
     }
 
     private func handleEvent(
@@ -111,18 +162,26 @@ final class ClickSuppressor {
         }
 
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
+            var tapToEnable: CFMachPort?
             stateLock.lock()
-            let tap = eventTap
+            if isTapEnabled {
+                tapToEnable = eventTap
+            }
             stateLock.unlock()
-            if let tap {
-                CGEvent.tapEnable(tap: tap, enable: true)
+            if let tapToEnable {
+                CGEvent.tapEnable(tap: tapToEnable, enable: true)
             }
             return Unmanaged.passUnretained(event)
         }
 
         if type == .leftMouseDown || type == .leftMouseUp || type == .leftMouseDragged {
             let now = ProcessInfo.processInfo.systemUptime
-            if shouldSuppress(now: now) {
+            var shouldSuppress = false
+            stateLock.lock()
+            shouldSuppress = now < suppressUntil
+            stateLock.unlock()
+
+            if shouldSuppress {
                 PerformanceMetrics.shared.recordClickSuppressorEvent(suppressed: true)
                 return nil
             }
