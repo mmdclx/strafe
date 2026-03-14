@@ -1,0 +1,131 @@
+<?xml version="1.0"?>
+
+<trace-toc>
+    <run number="1">
+        <info>
+            <target>
+                <device uuid="411A24B8-6104-5C8E-BCB0-C9B5759A2DDB" model="MacBook Pro" name="Mark’s MacBook Pro" os-version="15.7.3 (24G419)" platform="macOS"/>
+                <process type="attached" return-exit-status="0" name="Strafe" pid="65140" termination-reason="exit(0)"/>
+                <environment>
+                    <item key="CODEX_THREAD_ID" value="019cebfb-d977-71f2-93c0-2c9765f29f27"/>
+                    <item key="NVM_BIN" value="/Users/mmdclx/.nvm/versions/node/v22.14.0/bin"/>
+                    <item key="LaunchInstanceID" value="15FF7BB6-9F40-405A-A50D-605A9B152984"/>
+                    <item key="BUN_INSTALL" value="/Users/mmdclx/.bun"/>
+                    <item key="OLDPWD" value="/Users/mmdclx/code/strafe"/>
+                    <item key="executable_boothash" value="5282279787a3b0cc4658fac97033d8d1c4f13e19"/>
+                    <item key="SSH_AUTH_SOCK" value="/private/tmp/com.apple.launchd.dliTxU9uy6/Listeners"/>
+                    <item key="SHELL" value="/bin/zsh"/>
+                    <item key="PAGER" value="cat"/>
+                    <item key="XPC_SERVICE_NAME" value="application.com.mmdclx.Strafe.42263221.43836718"/>
+                    <item key="CODEX_CI" value="1"/>
+                    <item key="__CFBundleIdentifier" value="com.mmdclx.Strafe"/>
+                    <item key="executable_file" value="0x1a0100000d,0x29ce52e"/>
+                    <item key="dyld_file" value="0x1a0100000d,0xfffffff0009d6fb"/>
+                    <item key="NVM_DIR" value="/Users/mmdclx/.nvm"/>
+                    <item key="TERM_PROGRAM_VERSION" value="455.1"/>
+                    <item key="COMMAND_MODE" value="unix2003"/>
+                    <item key="HOMEBREW_REPOSITORY" value="/opt/homebrew"/>
+                    <item key="NVM_INC" value="/Users/mmdclx/.nvm/versions/node/v22.14.0/include/node"/>
+                    <item key="HOME" value="/Users/mmdclx"/>
+                    <item key="LANG" value="en_AU.UTF-8"/>
+                    <item key="PWD" value="/Users/mmdclx/code/strafe"/>
+                    <item key="LC_ALL" value="C.UTF-8"/>
+                    <item key="TMPDIR" value="/var/folders/l7/3xf_vbcs48l6xg25yfnl515m0000gn/T/"/>
+                    <item key="main_stack" value=""/>
+                    <item key="SHLVL" value="1"/>
+                    <item key="TERM" value="xterm-256color"/>
+                    <item key="XPC_FLAGS" value="1"/>
+                    <item key="HOMEBREW_CELLAR" value="/opt/homebrew/Cellar"/>
+                    <item key="PATH" value="/Users/mmdclx/.codex/tmp/arg0/codex-arg0NFjoC3:/Users/mmdclx/.antigravity/antigravity/bin:/Users/mmdclx/.bun/bin:/Users/mmdclx/.nvm/versions/node/v22.14.0/bin:/Users/mmdclx/.local/bin:/opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/System/Cryptexes/App/usr/bin:/usr/bin:/bin:/usr/sbin:/sbin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin:/var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin:/Applications/VMware Fusion.app/Contents/Public"/>
+                    <item key="security_config" value="0x0"/>
+                    <item key="USER" value="mmdclx"/>
+                    <item key="TERM_PROGRAM" value="Apple_Terminal"/>
+                    <item key="executable_cdhash" value="4bef525cdf4af75bd01a37afc02976b8c7b0813e"/>
+                    <item key="HOMEBREW_PREFIX" value="/opt/homebrew"/>
+                    <item key="TERM_SESSION_ID" value="20CFD1D6-DB1E-49B9-A6FF-3B3B69C7F306"/>
+                    <item key="COLORTERM" value=""/>
+                    <item key="CODEX_SANDBOX_NETWORK_DISABLED" value="1"/>
+                    <item key="NO_COLOR" value="1"/>
+                    <item key="arm64e_abi" value="os"/>
+                    <item key="LOGNAME" value="mmdclx"/>
+                    <item key="SECURITYSESSIONID" value="186b1"/>
+                    <item key="INFOPATH" value="/opt/homebrew/share/info:/opt/homebrew/share/info:"/>
+                    <item key="_" value="/usr/bin/open"/>
+                    <item key="LC_CTYPE" value="C.UTF-8"/>
+                    <item key="__CF_USER_TEXT_ENCODING" value="0x1F5:0:15"/>
+                    <item key="ptr_munge" value=""/>
+                    <item key="GH_PAGER" value="cat"/>
+                    <item key="GIT_PAGER" value="cat"/>
+                    <item key="th_port" value=""/>
+                    <item key="NVM_CD_FLAGS" value="-q"/>
+                </environment>
+            </target>
+            <summary>
+                <start-date>2026-03-14T22:02:00.870+11:00</start-date>
+                <end-date>2026-03-14T22:03:01.631+11:00</end-date>
+                <duration>60.760656</duration>
+                <end-reason>Time limit reached</end-reason>
+                <instruments-version>26.0 (17C52)</instruments-version>
+                <template-name>Time Profiler</template-name>
+                <recording-mode>Deferred</recording-mode>
+                <time-limit>1 minute</time-limit>
+                <intruments-recording-settings>
+                    <instrument name="Hangs">
+                        <array>
+                            <dictionary>
+                                <key name="Reporting Threshold">Include Microhangs (&gt;250ms)</key>
+                            </dictionary>
+                        </array>
+                    </instrument>
+                </intruments-recording-settings>
+            </summary>
+        </info>
+        <processes>
+            <process name="kernel.release.t8132" pid="0" path="/System/Library/Kernels/kernel.release.t8132"/>
+            <process name="Strafe" pid="65140" path="/Users/mmdclx/code/strafe/build/Strafe.app/Contents/MacOS/Strafe"/>
+        </processes>
+        <data>
+            <table schema="tick" frequency="10"/>
+            <table schema="life-cycle-period" target-pid="SINGLE"/>
+            <table schema="tick" frequency="1"/>
+            <table schema="device-thermal-state-intervals"/>
+            <table schema="os-log" category="PointsOfInterest"/>
+            <table subsystem="&quot;com.apple.ConditionInducer.LowSeverity&quot;" schema="os-signpost" category="InduceCondition"/>
+            <table dynamic-tracing-enabled-subsystems="&quot;com.apple.neappprivacy&quot;" schema="os-signpost" category="PointsOfInterest"/>
+            <table enable-priority-inversion-detection="0" target-pid="SINGLE" message-type="Fault" schema="os-log" category="&quot;Hang Risk&quot; &quot;Severe Hang Risk&quot; CFNetwork Contacts CoreML" subsystem="&quot;com.apple.runtime-issues&quot;"/>
+            <table target-pid="SINGLE" schema="hang-risks" detect-priority-inversions="0"/>
+            <table target-pid="SINGLE" schema="potential-hangs" hangs-threshold="250"/>
+            <table target-pid="SINGLE" schema="global-poi-layout" exclude-os-logs="0"/>
+            <table target-pid="SINGLE" context-switch-sampling="0" high-frequency-sampling="0" schema="time-profile" needs-kernel-callstack="0" record-waiting-threads="0"/>
+            <table schema="kdebug-signpost" target-pid="SINGLE"/>
+            <table codes="&quot;0x1f,0x05&quot;" schema="kdebug-strings" target="SINGLE"/>
+            <table schema="process-info"/>
+            <table schema="dyld-library-load" target-pid="SINGLE"/>
+            <table codes="&quot;33,0x11&quot;" schema="kdebug-strings" target="SINGLE"/>
+            <table schema="os-log-arg" category="PointsOfInterest"/>
+            <table codes="&quot;0x2b,0x65&quot;" schema="kdebug"/>
+            <table target-pid="SINGLE" schema="region-of-interest" exclude-os-logs="0"/>
+            <table codes="&quot;0x1,0x25&quot;" schema="kdebug" target="SINGLE"/>
+            <table codes="&quot;0x2b,0xdc&quot;" schema="kdebug" target="SINGLE"/>
+            <table codes="&quot;0x2d,*&quot;" schema="kdebug" callstack="user" target="SINGLE"/>
+            <table codes="&quot;0x07,0x00&quot;" schema="kdebug" target="SINGLE"/>
+            <table codes="&quot;46,2&quot;" schema="kdebug" callstack="user" target="SINGLE"/>
+            <table codes="&quot;0x1,0xa&quot;" schema="kdebug" callstack="user" target="SINGLE"/>
+            <table schema="global-roi-layout" target-pid="SINGLE"/>
+            <table codes="&quot;0x21,0xa&quot;" schema="kdebug" callstack="user" target="SINGLE"/>
+            <table codes="&quot;0x07,0x00&quot; &quot;0x1f,0x05&quot;" schema="kdebug" target="SINGLE"/>
+            <table codes="&quot;0x1f,0x7&quot;" schema="kdebug" target="SINGLE"/>
+            <table codes="&quot;0x2b,0x87&quot;" schema="kdebug" target="SINGLE"/>
+            <table codes="&quot;0x2b,0xd8&quot;" schema="kdebug" target="SINGLE"/>
+            <table codes="&quot;33,0x11&quot;" schema="kdebug" target="SINGLE"/>
+            <table codes="&quot;0x31,0xca&quot;" schema="kdebug" target="SINGLE"/>
+            <table schema="gcd-perf-event" target-pid="SINGLE"/>
+            <table schema="thread-info"/>
+            <table schema="runloop-events" target-pid="SINGLE"/>
+            <table target-pid="SINGLE" schema="roi-metadata" exclude-os-logs="0"/>
+            <table callstack="user" target="SINGLE" schema="time-sample" sample-rate-micro-seconds="1000" all-thread-states="NO"/>
+            <table schema="os-signpost-arg" category="PointsOfInterest"/>
+        </data>
+        <tracks/>
+    </run>
+</trace-toc>
