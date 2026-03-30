@@ -1,133 +1,95 @@
+# Strafe
+Lateral tab navigation at the speed of thought.
+macOS only. Designed for Apple Trackpads.
+
+Most trackpad gestures are designed for scrolling; Strafe is designed for speed. By leveraging a high-cadence "rest + tap" interaction, it lets you fly through browser tabs and other supported apps with zero friction and absolute precision.
+
 <p align="center">
   <img src="docs/assets/logo_with_title.png" width="347" alt="Strafe logo">
 </p>
 
-# Strafe v0.1
+## Status
 
-### Lateral tab navigation at the speed of thought.
+Strafe is currently a public preview for macOS 14+.
 
-**macOS only.** Designed for Apple Trackpads.
+- Apple trackpad required
+- Direct distribution only
+- Uses the private `OpenMultitouchSupport` package
+- Not App Store eligible in its current form
+- Unsigned preview release assets may trigger Gatekeeper warnings on first launch
 
-Most trackpad gestures are designed for scrolling; **Strafe** is designed for speed. By leveraging a high-cadence "rest + tap" interaction, it lets you fly through browser tabs and other supported apps with zero friction and absolute precision.
+## Download
 
----
+GitHub release assets are published here:
 
-## Features
-* **The Lateral Gesture:** Rest a finger to anchor your position and tap left or right with a second finger to switch tabs instantly.
-* **High-Performance Response:** Action latency is engineered to feel instantaneous, targeting a reaction time under 100ms.
-* **Rapid Cycling:** A short cooldown (currently 25ms) prevents accidental rapid cycling while allowing fast, repeated movements.
-* **Click Safety:** Successful gestures suppress accidental clicks for a brief window.
-* **End-to-End Wrap:** Wrap-around behavior comes from the target app's default tab navigation (e.g., Ctrl+Tab).
-* **Native Integration:** Low-level trackpad capture with context-aware tab switching for supported apps (Chrome, Safari, Finder, Terminal).
-* **Minimalist Footprint:** A single-purpose menu bar utility that stays out of your way and runs until quit.
+- <https://github.com/mmdclx/strafe/releases/latest>
 
----
+The intended first downloadable asset format is:
 
-## How It Works
-Strafe operates on a "Rest + Tap" logic. Unlike standard macOS gestures that require swiping or movement, Strafe triggers on a stationary state:
+- `Strafe-X.Y.Z-macos.zip`
+- `SHA256SUMS.txt`
 
-1.  **Rest:** Place one finger anywhere on the trackpad to act as your anchor.
-2.  **Tap:** Tap a second finger to the left or right of the resting finger.
-3.  **Result:** Immediately switch to the adjacent tab.
+Preview builds are currently unsigned. If macOS blocks first launch, right-click `Strafe.app`, choose `Open`, and confirm. If the app was quarantined by the browser, you may also need to clear quarantine manually.
 
-Keep the resting finger down to repeatedly tap and cycle through your workspace.
-
----
-
-## Supported Apps
-Strafe is context-aware. It only triggers when one of the following apps is frontmost, ensuring it never interferes with your other workflows:
-
-* **Google Chrome:** Rapidly cycle through your open tabs.
-* **Safari:** Native support for Apple’s default browser.
-* **Finder:** Pivot between multiple open Finder tabs with ease.
-* **Terminal:** Move laterally across your active terminal sessions.
-
----
-
-## Installation & Permissions
-Because Strafe interacts with your hardware at a low level and controls your frontmost app, it requires specific macOS permissions to function:
-
-* **Accessibility:** Required to send tab-switch commands via simulated keystrokes.
-* **Input Monitoring:** Required to observe raw trackpad touch data and detect the "rest + tap" gesture.
-
-Upon first launch, Strafe will prompt you to enable Accessibility in **System Settings > Privacy & Security**. If permissions are denied, the app will fail gracefully and prompt for activation.
-
----
-
-## Technical Details
-* **Gesture Engine:** Uses the private `OpenMultitouchSupport` package for raw trackpad touch data.
-* **Execution:** Injects standard keystrokes into the frontmost supported app (Ctrl+Tab / Ctrl+Shift+Tab).
-* **Click Guard:** Drops left-clicks immediately after a successful gesture to avoid accidental UI activation.
-* **Constraint:** Only active when a supported app is frontmost; it will not steal focus from other apps.
-
----
-
-## Privacy
-Strafe is a local-only utility. It does not collect data, require network access, or track your browsing history.
-
-
-## Apps
-Menu bar app that enables a custom trackpad gesture for left/right tab navigation in Chrome, Safari, Finder, and Terminal.
-
-## Build and Run
+## Build From Source
 
 Requirements:
+
 - macOS 14+
 - Xcode Command Line Tools
-- Network access on first build (SwiftPM downloads OpenMultitouchSupport)
+- Network access on first build for Swift Package Manager dependencies
 
-Commands:
-- `make build` builds `build/Strafe.app`
-- `make run` builds and opens the app
-- `make build CONFIG=release` for a release build
-- `make clean` removes `build/` output
-- `swift package clean` clears SwiftPM artifacts in `.build` if you want a full rebuild
+Happy path:
 
-## Performance Metrics (MM-63)
+```sh
+make build CONFIG=release
+open build/Strafe.app
+```
 
-Strafe includes lightweight aggregated perf instrumentation to support gesture profiling.
+Useful commands:
 
-- Debug builds (`make run`) emit a `performance` log line every 10s.
-- Release builds keep metrics off unless `STRAFE_PERF_METRICS=1`.
-- Metrics include callback/query rates and per-path timing summaries:
-  - touch callback frequency and sample volume
-  - gesture candidate evaluation count
-  - successful gesture triggers
-  - click suppressor invocations and dropped click events
-  - frontmost app query frequency
-  - avg/max timing for touch mapping, classifier processing, frontmost query, and click event handling
-
-To capture in release for local profiling:
-- `make build CONFIG=release`
-- `STRAFE_PERF_METRICS=1 build/Strafe.app/Contents/MacOS/Strafe`
-
-## Development Workflow (Feature Checklist)
-
-- Start from a clean tree: `git status -s`
-- Create/confirm a Linear issue and set it In Progress
-- Branch from `main` with a short-lived feature branch
-- Implement the change and validate locally (`make run`)
-- Commit the change with a clear message
-- Push the branch and merge to `main`
-- Update the Linear issue with findings and mark Done
-- Optionally delete the feature branch
-
-## Branching and Releases
-
-Branching is intentionally simple:
-- `main` stays stable.
-- Releases are tagged on `main` as `vX.Y.Z`.
-- If needed, cut a short-lived `release/vX.Y.Z` branch from `main` for prep or hotfixes, then merge back and delete it after tagging.
-
-Lightweight release flow:
-- Update `CFBundleShortVersionString` and `CFBundleVersion` in `Resources/Info.plist`.
-- Build a release binary (`make build CONFIG=release`).
-- Tag the release on `main` (`vX.Y.Z`).
+- `make build` builds a debug app bundle at `build/Strafe.app`
+- `make run` builds and opens the debug app bundle
+- `make build CONFIG=release` builds the release app bundle
+- `make package-release` builds a release bundle and creates a zip plus checksum in `build/`
+- `make clean` removes `build/`
 
 ## Permissions
 
-Strafe uses Accessibility to inject keystrokes. On first launch, macOS will prompt you to grant Accessibility access. You may need to enable Strafe in System Settings > Privacy & Security > Accessibility, and also grant Input Monitoring to capture raw trackpad touches.
+Strafe needs the following macOS permissions:
+
+- Accessibility: required to send tab-switch keystrokes
+- Input Monitoring: required to read raw trackpad touch data
+
+On first launch, macOS should prompt for Accessibility. You may need to grant both permissions in `System Settings > Privacy & Security`.
+
+## Supported Apps
+
+Strafe only triggers when one of these apps is frontmost:
+
+- Google Chrome
+- Safari
+- Finder
+- Terminal
+
+## How It Works
+
+Strafe uses a rest-and-tap gesture:
+
+1. Rest one finger anywhere on the trackpad.
+2. Tap a second finger to the left or right of the resting finger.
+3. Strafe sends the corresponding tab-navigation shortcut to the frontmost supported app.
+
+Keep the resting finger down to repeat taps and cycle quickly.
 
 ## Notes
 
-This MVP uses the private `OpenMultitouchSupport` package to access raw trackpad touches. It is not App Store eligible in its current form, and App Sandbox must remain disabled.
+- Strafe is local-only and does not collect data.
+- Release builds keep runtime performance metrics disabled unless `STRAFE_PERF_METRICS=1`.
+- This repository is public, but no open-source license is included at this stage.
+
+## Maintainer Docs
+
+- Development notes: [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)
+- Release checklist: [docs/RELEASING.md](docs/RELEASING.md)
+- Changelog: [CHANGELOG.md](CHANGELOG.md)
