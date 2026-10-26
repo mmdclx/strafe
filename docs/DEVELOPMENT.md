@@ -86,7 +86,9 @@ permission and is not inferred from absent touch input.
 The main state shows current input and briefly retains recognized outcomes.
 The footer keeps the last outcome and its original destination. “Shortcut sent”
 means Strafe dispatched the shortcut, not that it verified a tab change. Gestures
-with Strafe frontmost are previews. Raw values and thresholds live in Details.
+with Strafe frontmost are previews. Details keeps only Accessibility access,
+the current app's support status, and a plain-language summary of the last gesture.
+Finger IDs, timing, movement thresholds, and internal flags are omitted from the UI.
 The window scrolls when its content exceeds the available height.
 
 Debug delivery is capped at 30 Hz and coalesces to the latest frame, including

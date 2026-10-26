@@ -160,27 +160,28 @@ struct InspectorView: View {
     }
 
     private var detailRows: some View {
-        let state = model.debugState
-        return VStack(spacing: 0) {
-            detail("Accessibility", model.isTrusted ? "Granted" : "Not granted")
-            detail("Input Monitoring", "Not checked")
-            detail("Frontmost app", model.bundleID ?? "Unknown")
-            detail("Resting finger", state?.restingId.map(String.init) ?? "—")
-            detail("Tap candidate", state?.tapCandidateId.map(String.init) ?? "—")
-            detail("Horizontal separation / minimum", "\(number(state?.tapCandidateDeltaX.map(Double.init))) / \(number(Double(AppConstants.minTapDelta)))")
-            detail("Rest travel / limit", "\(number(state?.restingTravel.map(Double.init))) / \(number(Double(AppConstants.restingMovementThreshold)))")
-            detail("Tap travel / limit", "\(number(state?.tapCandidateTravel.map(Double.init))) / \(number(Double(AppConstants.tapCandidateMaxTravel)))")
-            detail("Tap duration / limit", "\(milliseconds(state?.tapCandidateAge)) / \(milliseconds(AppConstants.tapMaxDurationSeconds))")
-            detail("Rest missing / grace", "\(milliseconds(state?.restingMissingAge)) / \(milliseconds(AppConstants.restingGraceSeconds))")
-            detail("Tap locked", state.map { $0.tapLocked ? "Yes" : "No" } ?? "—")
-            detail("Scroll suppression", state.map { $0.scrollSuppressed ? "Active" : "Inactive" } ?? "—")
-            detail("Last recognition age", state.flatMap { $0.lastTriggerAge >= 0 ? milliseconds($0.lastTriggerAge) : nil } ?? "—")
-            detail("Touch phases", state.map { $0.touches.map { "\($0.id): \($0.phase.rawValue)" }.joined(separator: ", ") }.flatMap { $0.isEmpty ? nil : $0 } ?? "—")
-            detail("Last outcome", model.lastOutcomeLabel)
-            Text("Movement uses normalized trackpad units. A sent shortcut does not confirm a tab changed.")
-                .font(.system(size: 11)).foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading).padding(.top, 12)
+        VStack(spacing: 0) {
+            detail("Accessibility", model.isTrusted ? "Allowed" : "Required")
+            detail("Current app", currentAppDetail)
+            detail("Last gesture", lastGestureDetail)
+        }
+    }
+
+    private var currentAppDetail: String {
+        guard model.bundleID != nil else { return "No active app" }
+        if model.isPreviewApp { return "Strafe · Preview only" }
+        return "\(model.appName) · \(model.isSupportedApp ? "Supported" : "Not supported")"
+    }
+
+    private var lastGestureDetail: String {
+        guard let outcome = model.lastOutcome else { return "No gesture yet" }
+        let direction = outcome.routing.event == .left ? "Left" : "Right"
+        switch outcome.routing.disposition {
+        case .sent: return "\(direction) shortcut sent to \(outcome.appName)"
+        case .preview: return "\(direction) preview · No shortcut sent"
+        case .accessibilityRequired: return "\(direction) detected · Accessibility required"
+        case .unsupportedApp: return "\(direction) detected · \(outcome.appName) isn’t supported"
+        case .noFrontmostApp: return "\(direction) detected · No active app"
         }
     }
 
@@ -190,14 +191,12 @@ struct InspectorView: View {
             HStack(alignment: .top, spacing: 16) {
                 Text(label).foregroundStyle(.secondary)
                 Spacer(minLength: 0)
-                Text(value).monospacedDigit().multilineTextAlignment(.trailing).textSelection(.enabled)
+                Text(value).multilineTextAlignment(.trailing).textSelection(.enabled)
             }
             .font(.system(size: 11)).fixedSize(horizontal: false, vertical: true).padding(.vertical, 9)
         }.accessibilityElement(children: .combine)
     }
 
-    private func number(_ value: Double?) -> String { value.map { String(format: "%.3f", $0) } ?? "—" }
-    private func milliseconds(_ value: TimeInterval?) -> String { value.map { "\(Int($0 * 1000)) ms" } ?? "—" }
 }
 
 private struct InspectorTrackpad: View {

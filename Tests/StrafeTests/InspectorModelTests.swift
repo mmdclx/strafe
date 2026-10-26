@@ -109,7 +109,7 @@ struct InspectorModelTests {
                         model.record(GestureRoutingOutcome(event: .right, disposition: .sent, bundleID: "com.google.Chrome"), appName: "Chrome", now: 100)
                     }
                     model.detailsExpanded = scenario == "details"
-                    let height = scenario == "details" ? 1000.0 : width < 440 ? 650.0 : 460.0
+                    let height = width < 440 ? 650.0 : scenario == "details" ? 500.0 : 460.0
                     let view = InspectorView(model: model, openSettings: {})
                         .environment(\.colorScheme, dark ? .dark : .light)
                         .frame(width: width, height: height)
