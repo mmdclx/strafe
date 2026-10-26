@@ -4,11 +4,10 @@ import CoreGraphics
 final class ClickSuppressor {
     private let stateLock = NSLock()
     private let disableQueue = DispatchQueue(label: "Strafe.ClickSuppressor.Disable")
-    private var suppressUntil: TimeInterval = 0
+    private var suppressionWindow = ClickSuppressionWindow()
     private var eventTap: CFMachPort?
     private var isTapEnabled = false
     private var scheduledDisable: DispatchWorkItem?
-    private var scheduledDisableTarget: TimeInterval = 0
     private var runLoopSource: CFRunLoopSource?
     private var runLoop: CFRunLoop?
     private var tapThread: Thread?
@@ -78,9 +77,8 @@ final class ClickSuppressor {
         let scheduledDisable = scheduledDisable
         eventTap = nil
         isTapEnabled = false
-        suppressUntil = 0
+        suppressionWindow.reset()
         self.scheduledDisable = nil
-        scheduledDisableTarget = 0
         runLoopSource = nil
         runLoop = nil
         tapThread = nil
@@ -99,19 +97,16 @@ final class ClickSuppressor {
     func suppressClicks(for duration: TimeInterval) {
         PerformanceMetrics.shared.recordClickSuppressorInvocation()
         let now = ProcessInfo.processInfo.systemUptime
-        let requestedUntil = now + duration
         var tapToEnable: CFMachPort?
         var targetUntil: TimeInterval = 0
         var disableWorkItem: DispatchWorkItem?
         stateLock.lock()
-        suppressUntil = max(suppressUntil, requestedUntil)
-        targetUntil = suppressUntil
+        targetUntil = suppressionWindow.extend(for: duration, now: now)
         scheduledDisable?.cancel()
         let workItem = DispatchWorkItem { [weak self] in
             self?.disableTapIfExpired(targetUntil: targetUntil)
         }
         scheduledDisable = workItem
-        scheduledDisableTarget = targetUntil
         disableWorkItem = workItem
         if !isTapEnabled, let tap = eventTap {
             isTapEnabled = true
@@ -131,16 +126,11 @@ final class ClickSuppressor {
         var tapToDisable: CFMachPort?
         let now = ProcessInfo.processInfo.systemUptime
         stateLock.lock()
-        guard scheduledDisableTarget == targetUntil else {
-            stateLock.unlock()
-            return
-        }
-        guard now >= suppressUntil else {
+        guard suppressionWindow.expire(for: targetUntil, now: now) else {
             stateLock.unlock()
             return
         }
         scheduledDisable = nil
-        scheduledDisableTarget = 0
         if isTapEnabled {
             isTapEnabled = false
             tapToDisable = eventTap
@@ -178,7 +168,7 @@ final class ClickSuppressor {
             let now = ProcessInfo.processInfo.systemUptime
             var shouldSuppress = false
             stateLock.lock()
-            shouldSuppress = now < suppressUntil
+            shouldSuppress = suppressionWindow.isSuppressing(at: now)
             stateLock.unlock()
 
             if shouldSuppress {

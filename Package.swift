@@ -18,6 +18,7 @@ let package = Package(
             dependencies: [
                 .product(name: "OpenMultitouchSupport", package: "OpenMultitouchSupport")
             ]
-        )
+        ),
+        .testTarget(name: "StrafeTests", dependencies: ["Strafe"])
     ]
 )
