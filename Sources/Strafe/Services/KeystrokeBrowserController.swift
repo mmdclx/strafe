@@ -2,6 +2,12 @@ import CoreGraphics
 import Carbon
 
 final class KeystrokeBrowserController: BrowserNavigating {
+    private let postEvent: (CGEvent) -> Void
+
+    init(postEvent: @escaping (CGEvent) -> Void = { $0.post(tap: .cghidEventTap) }) {
+        self.postEvent = postEvent
+    }
+
     func navigateLeft() {
         postTabKey(shift: true)
         Log.debug(Log.navigation, "Navigate left")
@@ -24,7 +30,7 @@ final class KeystrokeBrowserController: BrowserNavigating {
         keyDown.flags = flags
         keyUp.flags = flags
 
-        keyDown.post(tap: .cghidEventTap)
-        keyUp.post(tap: .cghidEventTap)
+        postEvent(keyDown)
+        postEvent(keyUp)
     }
 }
