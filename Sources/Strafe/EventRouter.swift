@@ -1,3 +1,12 @@
+struct GestureRoutingOutcome {
+    enum Disposition {
+        case sent, preview, accessibilityRequired, unsupportedApp, noFrontmostApp
+    }
+    let event: GestureEvent
+    let disposition: Disposition
+    let bundleID: String?
+}
+
 @MainActor
 final class GestureEventRouter {
     private let frontmostQuery: FrontmostAppQuerying
@@ -12,13 +21,19 @@ final class GestureEventRouter {
 
     @discardableResult
     func handle(_ event: GestureEvent) -> Bool {
+        route(event).disposition == .sent
+    }
+
+    func route(_ event: GestureEvent) -> GestureRoutingOutcome {
         guard permissionChecker.isTrusted() else {
             Log.debug(Log.permissions, "Gesture ignored - accessibility not trusted")
-            return false
+            return GestureRoutingOutcome(event: event, disposition: .accessibilityRequired, bundleID: frontmostQuery.frontmostBundleId())
         }
-        guard let bundleId = frontmostQuery.frontmostBundleId(),
-              AppConstants.supportedBrowsers.contains(bundleId) else {
-            return false
+        guard let bundleId = frontmostQuery.frontmostBundleId() else {
+            return GestureRoutingOutcome(event: event, disposition: .noFrontmostApp, bundleID: nil)
+        }
+        guard AppConstants.supportedBrowsers.contains(bundleId) else {
+            return GestureRoutingOutcome(event: event, disposition: bundleId == AppConstants.bundleId ? .preview : .unsupportedApp, bundleID: bundleId)
         }
 
         switch event {
@@ -27,6 +42,6 @@ final class GestureEventRouter {
         case .right:
             browserNavigator.navigateRight()
         }
-        return true
+        return GestureRoutingOutcome(event: event, disposition: .sent, bundleID: bundleId)
     }
 }

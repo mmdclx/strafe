@@ -53,6 +53,29 @@ struct NavigationTests {
         #expect(!router.handle(.left))
         #expect(events.count == 2)
     }
+
+    @Test func routingExplainsEveryNonDispatchWithoutPostingKeys() {
+        var events: [CGEvent] = []
+        let permission = PermissionStub(trusted: true)
+        let frontmost = FrontmostStub(AppConstants.bundleId)
+        let router = GestureEventRouter(frontmostQuery: frontmost,
+                                        browserNavigator: KeystrokeBrowserController(postEvent: { events.append($0) }),
+                                        permissionChecker: permission)
+        #expect(router.route(.right).disposition == .preview)
+        frontmost.bundleID = "com.apple.TextEdit"
+        #expect(router.route(.right).disposition == .unsupportedApp)
+        frontmost.bundleID = nil
+        #expect(router.route(.right).disposition == .noFrontmostApp)
+        permission.trusted = false
+        #expect(router.route(.right).disposition == .accessibilityRequired)
+        #expect(events.isEmpty)
+        frontmost.bundleID = "com.apple.Safari"
+        permission.trusted = true
+        let sent = router.route(.left)
+        #expect(sent.disposition == .sent)
+        #expect(sent.bundleID == "com.apple.Safari")
+        #expect(events.count == 2)
+    }
 }
 
 @MainActor

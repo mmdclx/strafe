@@ -75,6 +75,52 @@ Before a release or after changes to OS/hardware integration:
 
 Record the test command/result and manual outcomes in the relevant Linear issue.
 
+## Fieldnote Inspector (MM-87)
+
+The Debug menu opens the native Fieldnote inspector. Accessibility is checked
+when it opens, when the active app changes, and once per second while visible.
+The warning stays until macOS confirms access. The Settings action opens the
+Accessibility pane; it does not grant permission. Input Monitoring is a separate
+permission and is not inferred from absent touch input.
+
+The main state shows current input and briefly retains recognized outcomes.
+The footer keeps the last outcome and its original destination. “Shortcut sent”
+means Strafe dispatched the shortcut, not that it verified a tab change. Gestures
+with Strafe frontmost are previews. Raw values and thresholds live in Details.
+The window scrolls when its content exceeds the available height.
+
+Debug delivery is capped at 30 Hz and coalesces to the latest frame, including
+the final lift. Closing, minimizing, or hiding the window stops delivery and the
+permission/age timer. Reopening clears stale contacts. Gesture recognition and
+navigation continue independently.
+
+For optional native screenshots of permission, idle, sent, and expanded Details
+at two widths and in both appearances:
+
+```sh
+STRAFE_INSPECTOR_SNAPSHOTS=/tmp/strafe-inspector swift test --filter InspectorModelTests
+```
+
+Manual review for this UI:
+
+1. With Accessibility off, open Debug before touching the trackpad. Check the
+   red pane and Settings action. Enable Strafe, return, and confirm the pane
+   disappears. Revoke access and confirm it returns without a gesture.
+2. Try left/right taps, rapid repeats, scrolling, and lifting all fingers. Check
+   supported apps, an unsupported app, and the inspector frontmost. No preview
+   or blocked gesture should be labeled as a sent shortcut.
+3. Check Details, narrow/wide resizing, light/dark, Increase Contrast, Reduce
+   Motion, keyboard focus, and VoiceOver. Check close/reopen and minimize/restore.
+4. Profile real trackpad input with Debug open and closed using the performance
+   metrics below. Unit tests do not establish hardware CPU/latency overhead.
+
+Until MM-86 is fixed, explicitly compile before bundling to avoid stale binaries:
+
+```sh
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift build -c release
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer make build CONFIG=release
+```
+
 ## Performance Metrics
 
 Strafe includes lightweight aggregated runtime metrics for local profiling.
