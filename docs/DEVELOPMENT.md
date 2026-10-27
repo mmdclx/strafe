@@ -96,6 +96,27 @@ the final lift. Closing, minimizing, or hiding the window stops delivery and the
 permission/age timer. Reopening clears stale contacts. Gesture recognition and
 navigation continue independently.
 
+Recognized taps produce a circular Contact echo at the last measured tapping-finger
+position, replacing the floating arrow. Defaults are depth 0.75, iridescence 0.3,
+and a 1,000 ms settle. Recognition events bypass live-frame coalescing so rapid
+taps are not lost; at most three independent echoes overlap. The effect confirms
+recognition only: the existing text still distinguishes preview, blocked, and sent.
+The native Metal surface renders at up to 60 Hz only while a visible echo is active,
+then stops. Reduce Motion uses a static 300 ms crest. If Metal is unavailable, a
+simple circular fallback remains. No shader resource files are needed in the bundle.
+
+To check GPU frames and the visible-window timer lifecycle (opens a small test window):
+
+```sh
+STRAFE_ECHO_SNAPSHOTS=/tmp/strafe-echo STRAFE_ECHO_WINDOW_REVIEW=1 swift test --filter ContactEchoTests
+```
+
+For contact-echo acceptance, check left/right taps at different trackpad positions,
+rapid repeats, and scrolling. The ring should originate at the tapping finger,
+stay circular as the window resizes, and leave the resting marker fixed. Check
+preview/blocked states, both appearances, Reduce Motion, and close/reopen or
+minimize/restore; no stale echo should replay.
+
 For optional native screenshots of permission, idle, sent, and expanded Details
 at two widths and in both appearances:
 

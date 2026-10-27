@@ -107,6 +107,11 @@ final class DebugWindowController: NSWindowController, NSWindowDelegate {
         model.update(debugState, now: ProcessInfo.processInfo.systemUptime)
     }
 
+    func handleRecognizedContact(_ position: CGPoint) {
+        guard streaming else { return }
+        model.recordContact(position, now: ProcessInfo.processInfo.systemUptime)
+    }
+
     private func openSettings() {
         // Only opens the pane. Trust is rechecked on activation and by the visible-window timer.
         let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!

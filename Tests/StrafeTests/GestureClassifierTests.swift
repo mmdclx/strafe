@@ -3,6 +3,28 @@ import Testing
 @testable import Strafe
 
 struct GestureClassifierTests {
+    @Test(arguments: [false, true])
+    func echoUsesReleasedContactEvenWhenItDisappears(endingSample: Bool) {
+        let gesture = GestureSequence(includeDebugState: true)
+        gesture.frame(10, [gesture.rest])
+        gesture.frame(10.1, [gesture.rest, gesture.tap()])
+        let moved = gesture.tap(x: 0.705, phase: .touching)
+        gesture.frame(10.12, [gesture.rest, moved])
+        let samples = endingSample ? [gesture.rest, gesture.tap(x: 0.705, phase: .leaving)] : [gesture.rest]
+        let result = gesture.classifier.process(samples: samples, now: 10.15, includeDebugState: true)
+        #expect(result.0 == .right)
+        #expect(result.1?.recognizedContact == moved.position)
+        #expect(gesture.classifier.process(samples: [gesture.rest], now: 10.16, includeDebugState: true).1?.recognizedContact == nil)
+    }
+
+    @Test func rejectedContactDoesNotProduceAnEcho() {
+        let gesture = GestureSequence(includeDebugState: true)
+        gesture.frame(10, [gesture.rest])
+        gesture.frame(10.1, [gesture.rest, gesture.tap(x: 0.51)])
+        let result = gesture.classifier.process(samples: [gesture.rest], now: 10.15, includeDebugState: true)
+        #expect(result.0 == nil)
+        #expect(result.1?.recognizedContact == nil)
+    }
     @Test(arguments: [CGFloat(0.3), CGFloat(0.7)])
     func tapFiresOnReleaseInCorrectDirection(tapX: CGFloat) {
         let gesture = GestureSequence()

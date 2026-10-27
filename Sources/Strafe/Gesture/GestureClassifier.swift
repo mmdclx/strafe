@@ -50,6 +50,8 @@ struct GestureDebugState {
     let tapLocked: Bool
     let tapCandidateAge: TimeInterval?
     let restingMissingAge: TimeInterval?
+    // Present only on a recognized release frame, before the tapping contact is removed.
+    var recognizedContact: CGPoint? = nil
 }
 
 final class GestureClassifier {
@@ -201,6 +203,7 @@ final class GestureClassifier {
         }
 
         var triggeredEvent: GestureEvent?
+        var recognizedContact: CGPoint?
 
         if let candidate = tapCandidate {
             let candidateEnded = endedIds.contains(candidate.id)
@@ -208,6 +211,7 @@ final class GestureClassifier {
             if candidateEnded || candidatePhaseEnding {
                 if shouldTriggerTap(candidate: candidate, now: now, currentIds: currentIds) {
                     triggeredEvent = candidate.deltaX < 0 ? .left : .right
+                    recognizedContact = activeTouches[candidate.id]?.position
                     lastTriggerTime = now
                     tapLocked = true
                 }
@@ -252,7 +256,9 @@ final class GestureClassifier {
             scheduleTapRearm(now: now, currentIds: currentIds)
         }
 
-        return (triggeredEvent, includeDebugState ? debugState(now: now) : nil)
+        var snapshot = includeDebugState ? debugState(now: now) : nil
+        snapshot?.recognizedContact = recognizedContact
+        return (triggeredEvent, snapshot)
     }
 
     private func selectCandidate(restingId: Int, newIds: [Int]) -> TouchInfo? {

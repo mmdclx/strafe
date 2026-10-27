@@ -22,6 +22,7 @@ final class InspectorModel: ObservableObject {
     @Published private(set) var appIcon: NSImage?
     @Published private(set) var debugState: GestureDebugState?
     @Published private(set) var lastOutcome: Outcome?
+    @Published private(set) var contactEchoes: [ContactEcho] = []
     @Published private(set) var now: TimeInterval = 0
     @Published var detailsExpanded = false
     @Published var settingsError = false
@@ -40,6 +41,7 @@ final class InspectorModel: ObservableObject {
     func update(_ state: GestureDebugState, now: TimeInterval) {
         debugState = state
         self.now = now
+        if state.scrollSuppressed && !contactEchoes.isEmpty { contactEchoes = [] }
     }
 
     func record(_ routing: GestureRoutingOutcome, appName: String, now: TimeInterval) {
@@ -47,7 +49,16 @@ final class InspectorModel: ObservableObject {
         self.now = now
     }
 
-    func clearLiveInput() { debugState = nil }
+    func recordContact(_ position: CGPoint, now: TimeInterval) {
+        guard position.x.isFinite, position.y.isFinite else { return }
+        contactEchoes = Array((contactEchoes.filter { $0.isActive(at: now) } +
+            [ContactEcho(position: position, timestamp: now)]).suffix(3))
+    }
+
+    func clearLiveInput() {
+        debugState = nil
+        contactEchoes = []
+    }
 
     var isSupportedApp: Bool { bundleID.map(AppConstants.supportedBrowsers.contains) ?? false }
     var isPreviewApp: Bool { bundleID == AppConstants.bundleId }

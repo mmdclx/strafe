@@ -86,7 +86,7 @@ struct InspectorView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            InspectorTrackpad(state: model.debugState, outcome: model.recentOutcome,
+            InspectorTrackpad(state: model.debugState, echoes: model.contactEchoes,
                               enabled: model.isTrusted, preview: !model.isTrusted || model.isPreviewApp)
                 .frame(maxWidth: .infinity)
                 .frame(height: compact ? 165 : 146)
@@ -201,7 +201,7 @@ struct InspectorView: View {
 
 private struct InspectorTrackpad: View {
     let state: GestureDebugState?
-    let outcome: InspectorModel.Outcome?
+    let echoes: [ContactEcho]
     let enabled: Bool
     let preview: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -214,9 +214,12 @@ private struct InspectorTrackpad: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(colorScheme == .dark ? Color(red: 0.149, green: 0.161, blue: 0.133) : Color(red: 0.953, green: 0.957, blue: 0.937))
-                    .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.primary.opacity(contrast == .increased ? 0.45 : 0.1)))
+                ContactEchoSurface(echoes: echoes, dark: colorScheme == .dark,
+                                   reducedMotion: reduceMotion, increasedContrast: contrast == .increased)
+                    .background(colorScheme == .dark ? Color(red: 38/255, green: 41/255, blue: 34/255) : Color(red: 243/255, green: 244/255, blue: 239/255))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
                 VStack {
                     HStack {
                         Text("INPUT").tracking(0.6)
@@ -233,21 +236,12 @@ private struct InspectorTrackpad: View {
                 }
                 ForEach(contacts, id: \.id) { touch in
                     contact(touch)
-                        .position(x: 24 + min(1, max(0, touch.position.x)) * max(0, geometry.size.width - 48),
-                                  y: 40 + (1 - min(1, max(0, touch.position.y))) * max(0, geometry.size.height - 88))
+                        .position(InspectorTrackpadGeometry.point(touch.position, in: geometry.size))
                 }
-                if let outcome {
-                    Image(systemName: outcome.routing.event == .left ? "arrow.left" : "arrow.right")
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundStyle(accent)
-                        .padding(6)
-                        .background(Color(nsColor: .windowBackgroundColor), in: Capsule())
-                        .position(x: geometry.size.width / 2, y: 36)
-                        .id(outcome.timestamp)
-                        .transition(reduceMotion ? .identity : .opacity)
-                }
+                RoundedRectangle(cornerRadius: 12)
+                    .strokeBorder(Color.primary.opacity(contrast == .increased ? 0.45 : 0.1))
+                    .allowsHitTesting(false)
             }
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: outcome?.timestamp)
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Trackpad input")
@@ -260,15 +254,16 @@ private struct InspectorTrackpad: View {
         let moving = touch.movedBeyondScroll || touch.movedBeyondRest
         let color: Color = tapping && !moving ? accent : .secondary
         let label = touch.phase.isEnding ? "Released" : moving ? "Moving" : resting ? "Rest" : tapping ? "Tap" : "Touch"
-        return VStack(spacing: 5) {
-            ZStack {
-                Circle().strokeBorder(color.opacity(0.7), style: StrokeStyle(lineWidth: 1, dash: touch.phase.isEnding ? [3, 3] : []))
-                    .frame(width: resting ? 28 : 24, height: resting ? 28 : 24)
-                Circle().fill(resting ? Color.primary : color)
-                    .frame(width: touch.phase.isEnding ? 5 : 10, height: touch.phase.isEnding ? 5 : 10)
-                    .opacity(touch.phase.isEnding ? 0.4 : 1)
-            }
+        return ZStack {
+            Circle().strokeBorder(color.opacity(0.7), style: StrokeStyle(lineWidth: 1, dash: touch.phase.isEnding ? [3, 3] : []))
+                .frame(width: resting ? 28 : 24, height: resting ? 28 : 24)
+            Circle().fill(resting ? Color.primary : color)
+                .frame(width: touch.phase.isEnding ? 5 : 10, height: touch.phase.isEnding ? 5 : 10)
+                .opacity(touch.phase.isEnding ? 0.4 : 1)
+        }
+        .overlay(alignment: .top) {
             Text(label).font(.system(size: 10)).foregroundStyle(.secondary)
+                .fixedSize().offset(y: resting ? 33 : 29)
         }
     }
 

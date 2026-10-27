@@ -88,6 +88,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             self?.debugWindowController?.handle(debugState: state)
         }
         gestureEngine.onDebugState = { [weak self] state in
+            // Recognition is an event: preserve it before the 30 Hz live-frame coalescer.
+            if let position = state.recognizedContact {
+                self?.debugWindowController?.handleRecognizedContact(position)
+            }
             self?.debugStateDelivery.submit(state)
         }
     }
