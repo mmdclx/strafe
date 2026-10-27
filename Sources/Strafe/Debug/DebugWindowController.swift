@@ -9,6 +9,7 @@ final class DebugWindowController: NSWindowController, NSWindowDelegate {
     private var streaming = false
     private var cachedApp: NSRunningApplication?
     private var cachedIcon: NSImage?
+    private var hosting: NSHostingView<InspectorView>?
     var onVisibilityChanged: ((Bool) -> Void)?
 
     init(permissionChecker: PermissionChecking) {
@@ -23,12 +24,17 @@ final class DebugWindowController: NSWindowController, NSWindowDelegate {
         window.contentMinSize = NSSize(width: 340, height: 380)
         window.setFrameAutosaveName("FieldnoteInspector")
         super.init(window: window)
+        window.delegate = self
+        window.center()
+    }
+
+    private func installContent() {
+        guard hosting == nil else { return }
         let content = InspectorView(model: model, openSettings: { [weak self] in self?.openSettings() })
         let hosting = NSHostingView(rootView: content)
         hosting.sizingOptions = []
-        window.contentView = hosting
-        window.delegate = self
-        window.center()
+        self.hosting = hosting
+        window?.contentView = hosting
         NSWorkspace.shared.notificationCenter.addObserver(self, selector: #selector(contextDidChange), name: NSWorkspace.didActivateApplicationNotification, object: nil)
         for name in [NSApplication.didBecomeActiveNotification, NSApplication.didHideNotification, NSApplication.didUnhideNotification] {
             NotificationCenter.default.addObserver(self, selector: #selector(contextDidChange), name: name, object: nil)
@@ -38,18 +44,32 @@ final class DebugWindowController: NSWindowController, NSWindowDelegate {
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
     func show() {
+        installContent()
         refreshContext()
         window?.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
         updateVisibility()
     }
 
-    func windowWillClose(_ notification: Notification) { setStreaming(false) }
+    func windowWillClose(_ notification: Notification) {
+        // Stop synchronously, before SwiftUI processes the model change or AppKit hides the window.
+        func stopSurfaces(in view: NSView) {
+            (view as? ContactEchoSurfaceView)?.stop()
+            view.subviews.forEach { stopSurfaces(in: $0) }
+        }
+        if let hosting { stopSurfaces(in: hosting) }
+        setStreaming(false)
+        NSWorkspace.shared.notificationCenter.removeObserver(self)
+        NotificationCenter.default.removeObserver(self)
+        window?.contentView = nil
+        hosting = nil
+    }
     func windowDidMiniaturize(_ notification: Notification) { setStreaming(false) }
     func windowDidDeminiaturize(_ notification: Notification) { updateVisibility() }
     func windowDidBecomeKey(_ notification: Notification) { contextDidChange() }
 
     @objc private func contextDidChange() {
+        guard hosting != nil else { return }
         updateVisibility()
         if streaming { refreshContext() }
     }
@@ -105,6 +125,11 @@ final class DebugWindowController: NSWindowController, NSWindowDelegate {
     func handle(debugState: GestureDebugState) {
         guard streaming else { return }
         model.update(debugState, now: ProcessInfo.processInfo.systemUptime)
+    }
+
+    func handleRecognizedContact(_ position: CGPoint) {
+        guard streaming else { return }
+        model.recordContact(position, now: ProcessInfo.processInfo.systemUptime)
     }
 
     private func openSettings() {

@@ -86,7 +86,7 @@ struct InspectorView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            InspectorTrackpad(state: model.debugState, outcome: model.recentOutcome,
+            InspectorTrackpad(state: model.debugState, echoes: model.contactEchoes,
                               enabled: model.isTrusted, preview: !model.isTrusted || model.isPreviewApp)
                 .frame(maxWidth: .infinity)
                 .frame(height: compact ? 165 : 146)
@@ -160,27 +160,28 @@ struct InspectorView: View {
     }
 
     private var detailRows: some View {
-        let state = model.debugState
-        return VStack(spacing: 0) {
-            detail("Accessibility", model.isTrusted ? "Granted" : "Not granted")
-            detail("Input Monitoring", "Not checked")
-            detail("Frontmost app", model.bundleID ?? "Unknown")
-            detail("Resting finger", state?.restingId.map(String.init) ?? "—")
-            detail("Tap candidate", state?.tapCandidateId.map(String.init) ?? "—")
-            detail("Horizontal separation / minimum", "\(number(state?.tapCandidateDeltaX.map(Double.init))) / \(number(Double(AppConstants.minTapDelta)))")
-            detail("Rest travel / limit", "\(number(state?.restingTravel.map(Double.init))) / \(number(Double(AppConstants.restingMovementThreshold)))")
-            detail("Tap travel / limit", "\(number(state?.tapCandidateTravel.map(Double.init))) / \(number(Double(AppConstants.tapCandidateMaxTravel)))")
-            detail("Tap duration / limit", "\(milliseconds(state?.tapCandidateAge)) / \(milliseconds(AppConstants.tapMaxDurationSeconds))")
-            detail("Rest missing / grace", "\(milliseconds(state?.restingMissingAge)) / \(milliseconds(AppConstants.restingGraceSeconds))")
-            detail("Tap locked", state.map { $0.tapLocked ? "Yes" : "No" } ?? "—")
-            detail("Scroll suppression", state.map { $0.scrollSuppressed ? "Active" : "Inactive" } ?? "—")
-            detail("Last recognition age", state.flatMap { $0.lastTriggerAge >= 0 ? milliseconds($0.lastTriggerAge) : nil } ?? "—")
-            detail("Touch phases", state.map { $0.touches.map { "\($0.id): \($0.phase.rawValue)" }.joined(separator: ", ") }.flatMap { $0.isEmpty ? nil : $0 } ?? "—")
-            detail("Last outcome", model.lastOutcomeLabel)
-            Text("Movement uses normalized trackpad units. A sent shortcut does not confirm a tab changed.")
-                .font(.system(size: 11)).foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading).padding(.top, 12)
+        VStack(spacing: 0) {
+            detail("Accessibility", model.isTrusted ? "Allowed" : "Required")
+            detail("Current app", currentAppDetail)
+            detail("Last gesture", lastGestureDetail)
+        }
+    }
+
+    private var currentAppDetail: String {
+        guard model.bundleID != nil else { return "No active app" }
+        if model.isPreviewApp { return "Strafe · Preview only" }
+        return "\(model.appName) · \(model.isSupportedApp ? "Supported" : "Not supported")"
+    }
+
+    private var lastGestureDetail: String {
+        guard let outcome = model.lastOutcome else { return "No gesture yet" }
+        let direction = outcome.routing.event == .left ? "Left" : "Right"
+        switch outcome.routing.disposition {
+        case .sent: return "\(direction) shortcut sent to \(outcome.appName)"
+        case .preview: return "\(direction) preview · No shortcut sent"
+        case .accessibilityRequired: return "\(direction) detected · Accessibility required"
+        case .unsupportedApp: return "\(direction) detected · \(outcome.appName) isn’t supported"
+        case .noFrontmostApp: return "\(direction) detected · No active app"
         }
     }
 
@@ -190,19 +191,17 @@ struct InspectorView: View {
             HStack(alignment: .top, spacing: 16) {
                 Text(label).foregroundStyle(.secondary)
                 Spacer(minLength: 0)
-                Text(value).monospacedDigit().multilineTextAlignment(.trailing).textSelection(.enabled)
+                Text(value).multilineTextAlignment(.trailing).textSelection(.enabled)
             }
             .font(.system(size: 11)).fixedSize(horizontal: false, vertical: true).padding(.vertical, 9)
         }.accessibilityElement(children: .combine)
     }
 
-    private func number(_ value: Double?) -> String { value.map { String(format: "%.3f", $0) } ?? "—" }
-    private func milliseconds(_ value: TimeInterval?) -> String { value.map { "\(Int($0 * 1000)) ms" } ?? "—" }
 }
 
 private struct InspectorTrackpad: View {
     let state: GestureDebugState?
-    let outcome: InspectorModel.Outcome?
+    let echoes: [ContactEcho]
     let enabled: Bool
     let preview: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -215,9 +214,12 @@ private struct InspectorTrackpad: View {
     var body: some View {
         GeometryReader { geometry in
             ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(colorScheme == .dark ? Color(red: 0.149, green: 0.161, blue: 0.133) : Color(red: 0.953, green: 0.957, blue: 0.937))
-                    .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.primary.opacity(contrast == .increased ? 0.45 : 0.1)))
+                ContactEchoSurface(echoes: echoes, dark: colorScheme == .dark,
+                                   reducedMotion: reduceMotion, increasedContrast: contrast == .increased)
+                    .background(colorScheme == .dark ? Color(red: 38/255, green: 41/255, blue: 34/255) : Color(red: 243/255, green: 244/255, blue: 239/255))
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
                 VStack {
                     HStack {
                         Text("INPUT").tracking(0.6)
@@ -234,21 +236,12 @@ private struct InspectorTrackpad: View {
                 }
                 ForEach(contacts, id: \.id) { touch in
                     contact(touch)
-                        .position(x: 24 + min(1, max(0, touch.position.x)) * max(0, geometry.size.width - 48),
-                                  y: 40 + (1 - min(1, max(0, touch.position.y))) * max(0, geometry.size.height - 88))
+                        .position(InspectorTrackpadGeometry.point(touch.position, in: geometry.size))
                 }
-                if let outcome {
-                    Image(systemName: outcome.routing.event == .left ? "arrow.left" : "arrow.right")
-                        .font(.system(size: 17, weight: .medium))
-                        .foregroundStyle(accent)
-                        .padding(6)
-                        .background(Color(nsColor: .windowBackgroundColor), in: Capsule())
-                        .position(x: geometry.size.width / 2, y: 36)
-                        .id(outcome.timestamp)
-                        .transition(reduceMotion ? .identity : .opacity)
-                }
+                RoundedRectangle(cornerRadius: 12)
+                    .strokeBorder(Color.primary.opacity(contrast == .increased ? 0.45 : 0.1))
+                    .allowsHitTesting(false)
             }
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.15), value: outcome?.timestamp)
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("Trackpad input")
@@ -261,15 +254,16 @@ private struct InspectorTrackpad: View {
         let moving = touch.movedBeyondScroll || touch.movedBeyondRest
         let color: Color = tapping && !moving ? accent : .secondary
         let label = touch.phase.isEnding ? "Released" : moving ? "Moving" : resting ? "Rest" : tapping ? "Tap" : "Touch"
-        return VStack(spacing: 5) {
-            ZStack {
-                Circle().strokeBorder(color.opacity(0.7), style: StrokeStyle(lineWidth: 1, dash: touch.phase.isEnding ? [3, 3] : []))
-                    .frame(width: resting ? 28 : 24, height: resting ? 28 : 24)
-                Circle().fill(resting ? Color.primary : color)
-                    .frame(width: touch.phase.isEnding ? 5 : 10, height: touch.phase.isEnding ? 5 : 10)
-                    .opacity(touch.phase.isEnding ? 0.4 : 1)
-            }
+        return ZStack {
+            Circle().strokeBorder(color.opacity(0.7), style: StrokeStyle(lineWidth: 1, dash: touch.phase.isEnding ? [3, 3] : []))
+                .frame(width: resting ? 28 : 24, height: resting ? 28 : 24)
+            Circle().fill(resting ? Color.primary : color)
+                .frame(width: touch.phase.isEnding ? 5 : 10, height: touch.phase.isEnding ? 5 : 10)
+                .opacity(touch.phase.isEnding ? 0.4 : 1)
+        }
+        .overlay(alignment: .top) {
             Text(label).font(.system(size: 10)).foregroundStyle(.secondary)
+                .fixedSize().offset(y: resting ? 33 : 29)
         }
     }
 

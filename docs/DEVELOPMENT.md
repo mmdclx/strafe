@@ -86,13 +86,50 @@ permission and is not inferred from absent touch input.
 The main state shows current input and briefly retains recognized outcomes.
 The footer keeps the last outcome and its original destination. “Shortcut sent”
 means Strafe dispatched the shortcut, not that it verified a tab change. Gestures
-with Strafe frontmost are previews. Raw values and thresholds live in Details.
+with Strafe frontmost are previews. Details keeps only Accessibility access,
+the current app's support status, and a plain-language summary of the last gesture.
+Finger IDs, timing, movement thresholds, and internal flags are omitted from the UI.
 The window scrolls when its content exceeds the available height.
 
 Debug delivery is capped at 30 Hz and coalesces to the latest frame, including
 the final lift. Closing, minimizing, or hiding the window stops delivery and the
 permission/age timer. Reopening clears stale contacts. Gesture recognition and
 navigation continue independently.
+
+Recognized taps produce a circular Contact echo at the last measured tapping-finger
+position, replacing the floating arrow. Defaults are depth 0.75, iridescence 0.3,
+and a 1,000 ms settle. Recognition events bypass live-frame coalescing so rapid
+taps are not lost; at most three independent echoes overlap. The effect confirms
+recognition only: the existing text still distinguishes preview, blocked, and sent.
+The native Metal surface renders at up to 60 Hz only while a visible echo is active,
+then stops. Reduce Motion uses a static 300 ms crest. If Metal is unavailable, a
+simple circular fallback remains. No shader resource files are needed in the bundle.
+
+Closing Debug synchronously cancels its animation timer, detaches the Metal delegate,
+releases drawables, removes the renderer and controller notification subscriptions,
+and discards the hosted view tree. Debug input/outcome callbacks and queued coalesced
+frames are disconnected. Reopening creates a fresh surface; history remains in the
+presentation model. The cached Metal pipeline retains memory but has no timer or
+render loop. A GPU command already submitted before closing can finish; no further
+commands are submitted by the closed inspector. Minimized/hidden surfaces also stop
+their animation timer. The normal gesture engine remains active independently.
+
+To check GPU frames and the visible-window timer lifecycle (opens a small test window):
+
+```sh
+STRAFE_ECHO_SNAPSHOTS=/tmp/strafe-echo STRAFE_ECHO_WINDOW_REVIEW=1 swift test --filter ContactEchoTests
+```
+
+The window check instruments actual animation timer callbacks and Metal submissions,
+closes mid-ripple with a queued debug frame, and verifies unchanged counters for
+2.2 seconds while sending 100 notification/input bursts. It also checks that
+permission refreshes stop and reopening accepts new gestures without replaying an echo.
+
+For contact-echo acceptance, check left/right taps at different trackpad positions,
+rapid repeats, and scrolling. The ring should originate at the tapping finger,
+stay circular as the window resizes, and leave the resting marker fixed. Check
+preview/blocked states, both appearances, Reduce Motion, and close/reopen or
+minimize/restore; no stale echo should replay.
 
 For optional native screenshots of permission, idle, sent, and expanded Details
 at two widths and in both appearances:

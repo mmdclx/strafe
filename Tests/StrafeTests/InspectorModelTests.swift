@@ -47,6 +47,20 @@ struct InspectorModelTests {
         #expect(model.message.title == "Rest a finger to begin")
     }
 
+    @Test func echoesAreBoundedAndClearedByScrollingOrClosing() {
+        let model = InspectorModel()
+        for i in 0..<5 { model.recordContact(CGPoint(x: CGFloat(i) / 5, y: 0.5), now: 100 + Double(i) * 0.05) }
+        #expect(model.contactEchoes.count == 3)
+        #expect(model.contactEchoes.first?.position.x == 0.4)
+        model.recordContact(CGPoint(x: 0.7, y: 0.5), now: 102)
+        #expect(model.contactEchoes.count == 1)
+        model.update(state(scroll: true), now: 102.1)
+        #expect(model.contactEchoes.isEmpty)
+        model.recordContact(CGPoint(x: 0.3, y: 0.5), now: 103)
+        model.clearLiveInput()
+        #expect(model.contactEchoes.isEmpty)
+    }
+
     @Test(arguments: [GestureRoutingOutcome.Disposition.preview, .accessibilityRequired, .unsupportedApp, .noFrontmostApp])
     func blockedAndPreviewOutcomesNeverBecomeSent(disposition: GestureRoutingOutcome.Disposition) {
         let model = InspectorModel()
@@ -109,7 +123,7 @@ struct InspectorModelTests {
                         model.record(GestureRoutingOutcome(event: .right, disposition: .sent, bundleID: "com.google.Chrome"), appName: "Chrome", now: 100)
                     }
                     model.detailsExpanded = scenario == "details"
-                    let height = scenario == "details" ? 1000.0 : width < 440 ? 650.0 : 460.0
+                    let height = width < 440 ? 650.0 : scenario == "details" ? 500.0 : 460.0
                     let view = InspectorView(model: model, openSettings: {})
                         .environment(\.colorScheme, dark ? .dark : .light)
                         .frame(width: width, height: height)
