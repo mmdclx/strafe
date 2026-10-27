@@ -105,11 +105,25 @@ The native Metal surface renders at up to 60 Hz only while a visible echo is act
 then stops. Reduce Motion uses a static 300 ms crest. If Metal is unavailable, a
 simple circular fallback remains. No shader resource files are needed in the bundle.
 
+Closing Debug synchronously cancels its animation timer, detaches the Metal delegate,
+releases drawables, removes the renderer and controller notification subscriptions,
+and discards the hosted view tree. Debug input/outcome callbacks and queued coalesced
+frames are disconnected. Reopening creates a fresh surface; history remains in the
+presentation model. The cached Metal pipeline retains memory but has no timer or
+render loop. A GPU command already submitted before closing can finish; no further
+commands are submitted by the closed inspector. Minimized/hidden surfaces also stop
+their animation timer. The normal gesture engine remains active independently.
+
 To check GPU frames and the visible-window timer lifecycle (opens a small test window):
 
 ```sh
 STRAFE_ECHO_SNAPSHOTS=/tmp/strafe-echo STRAFE_ECHO_WINDOW_REVIEW=1 swift test --filter ContactEchoTests
 ```
+
+The window check instruments actual animation timer callbacks and Metal submissions,
+closes mid-ripple with a queued debug frame, and verifies unchanged counters for
+2.2 seconds while sending 100 notification/input bursts. It also checks that
+permission refreshes stop and reopening accepts new gestures without replaying an echo.
 
 For contact-echo acceptance, check left/right taps at different trackpad positions,
 rapid repeats, and scrolling. The ring should originate at the tapping finger,

@@ -5,6 +5,92 @@ import Testing
 
 @MainActor
 struct ContactEchoTests {
+    @Test func closingInspectorEliminatesRippleWorkAndReopensFresh() throws {
+        guard ProcessInfo.processInfo.environment["STRAFE_ECHO_WINDOW_REVIEW"] == "1" else { return }
+        _ = NSApplication.shared
+        let permission = EchoPermissionProbe()
+        let controller = DebugWindowController(permissionChecker: permission)
+        let delivery = DebugStateDelivery()
+        var streaming = false
+        controller.onVisibilityChanged = { enabled in
+            streaming = enabled
+            if enabled { delivery.start { controller.handle(debugState: $0) } }
+            else { delivery.stop() }
+        }
+        defer { controller.onVisibilityChanged = nil; delivery.stop(); controller.close() }
+        func surface(in view: NSView?) -> ContactEchoSurfaceView? {
+            guard let view else { return nil }
+            if let found = view as? ContactEchoSurfaceView { return found }
+            return view.subviews.lazy.compactMap { surface(in: $0) }.first
+        }
+        controller.show()
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.15))
+        let original = try #require(surface(in: controller.window?.contentView))
+        let metal = try #require(original.subviews.compactMap { $0 as? MTKView }.first)
+        #expect(metal.isPaused)
+        #expect(!metal.enableSetNeedsDisplay)
+        #expect(streaming)
+
+        // Another window's lifecycle must not wake this surface, even while Debug is open.
+        let unrelated = NSWindow(contentRect: .zero, styleMask: [], backing: .buffered, defer: false)
+        unrelated.isReleasedWhenClosed = false
+        let beforeUnrelated = original.activity
+        NotificationCenter.default.post(name: NSWindow.didChangeOcclusionStateNotification, object: unrelated)
+        #expect(original.activity == beforeUnrelated)
+
+        controller.handleRecognizedContact(CGPoint(x: 0.7, y: 0.5))
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.12))
+        #expect(original.isAnimating)
+        #expect(original.activity.timerCallbacks > 0)
+        #expect(original.activity.gpuSubmissions > 0)
+        let pendingState = GestureDebugState(touches: [], restingId: nil, tapCandidateId: nil,
+            tapCandidateDeltaX: nil, tapCandidateTravel: nil, restingTravel: nil,
+            scrollSuppressed: false, lastTriggerAge: -1, tapLocked: false,
+            tapCandidateAge: nil, restingMissingAge: nil)
+        delivery.submit(pendingState)
+        delivery.submit(pendingState) // Leave a coalesced callback queued at close.
+        controller.close() // Close midway through a live ripple.
+        #expect(!original.isAnimating)
+        #expect(!streaming)
+        #expect(metal.delegate == nil)
+        #expect(surface(in: controller.window?.contentView) == nil)
+        #expect(controller.model.contactEchoes.isEmpty)
+        let closedActivity = original.activity
+        let permissionReads = permission.reads
+
+        for _ in 0..<100 {
+            NotificationCenter.default.post(name: NSWindow.didChangeOcclusionStateNotification, object: unrelated)
+            NotificationCenter.default.post(name: NSWindow.didChangeOcclusionStateNotification, object: controller.window)
+            NotificationCenter.default.post(name: NSApplication.didBecomeActiveNotification, object: NSApp)
+            NotificationCenter.default.post(name: NSApplication.didUnhideNotification, object: NSApp)
+            NSWorkspace.shared.notificationCenter.post(name: NSWorkspace.didActivateApplicationNotification, object: nil)
+            controller.handleRecognizedContact(CGPoint(x: 0.3, y: 0.5))
+            controller.handle(GestureRoutingOutcome(event: .left, disposition: .preview, bundleID: AppConstants.bundleId))
+            delivery.submit(pendingState)
+        }
+        original.update(echoes: [ContactEcho(position: .zero, timestamp: ProcessInfo.processInfo.systemUptime)],
+                        dark: true, reducedMotion: false, increasedContrast: false)
+        original.draw(in: metal) // Late framework callbacks cannot submit another command either.
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 2.2))
+        #expect(original.activity == closedActivity)
+        #expect(permission.reads == permissionReads)
+        #expect(controller.model.contactEchoes.isEmpty)
+        #expect(controller.model.debugState == nil)
+        #expect(!original.isAnimating)
+        print("Closed inspector audit: 0 timer callbacks, 0 GPU submissions, 0 visibility callbacks, 0 permission refreshes over 2.2 seconds + 100 notification/input bursts.")
+
+        controller.show()
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.15))
+        let reopened = try #require(surface(in: controller.window?.contentView))
+        #expect(reopened !== original)
+        #expect(!reopened.isAnimating)
+        #expect(controller.model.contactEchoes.isEmpty)
+        controller.handleRecognizedContact(CGPoint(x: 0.7, y: 0.5))
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.08))
+        #expect(reopened.isAnimating)
+        #expect(reopened.activity.gpuSubmissions > 0)
+    }
+
     @Test func visibleWindowAnimationStopsAtIdleAndWhenHidden() throws {
         guard ProcessInfo.processInfo.environment["STRAFE_ECHO_WINDOW_REVIEW"] == "1" else { return }
         _ = NSApplication.shared
@@ -92,4 +178,11 @@ struct ContactEchoTests {
             #expect(try render([echo], 100.31, dark, reduced: true) == idle)
         }
     }
+}
+
+@MainActor
+private final class EchoPermissionProbe: PermissionChecking {
+    private(set) var reads = 0
+    func isTrusted() -> Bool { reads += 1; return true }
+    func promptIfNeeded() {}
 }

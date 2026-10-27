@@ -15,6 +15,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var debugWindowController: DebugWindowController?
     private var statusItem: NSStatusItem?
     private let debugStateDelivery = DebugStateDelivery()
+    private var handleDebugOutcome: ((GestureRoutingOutcome) -> Void)?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupStatusItem()
@@ -27,7 +28,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         gestureEngine.onGesture = { [weak self] event in
             guard let self else { return }
             let outcome = self.eventRouter.route(event)
-            self.debugWindowController?.handle(outcome)
+            self.handleDebugOutcome?(outcome)
             if outcome.disposition == .sent {
                 self.clickSuppressor.suppressClicks(for: AppConstants.clickSuppressionSeconds)
             }
@@ -80,9 +81,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     private func setDebugStateStreaming(enabled: Bool) {
         if !enabled {
+            handleDebugOutcome = nil
             gestureEngine.onDebugState = nil
             debugStateDelivery.stop()
             return
+        }
+        handleDebugOutcome = { [weak self] outcome in
+            self?.debugWindowController?.handle(outcome)
         }
         debugStateDelivery.start { [weak self] state in
             self?.debugWindowController?.handle(debugState: state)

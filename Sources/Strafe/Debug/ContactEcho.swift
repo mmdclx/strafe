@@ -52,6 +52,13 @@ final class ContactEchoSurfaceView: NSView, MTKViewDelegate {
     private var dark = false
     private var reducedMotion = false
     private var increasedContrast = false
+    private var stopped = false
+    struct Activity: Equatable {
+        var timerCallbacks = 0
+        var gpuSubmissions = 0
+        var visibilityCallbacks = 0
+    }
+    private(set) var activity = Activity()
     var isAnimating: Bool { timer != nil }
     override var isFlipped: Bool { true }
 
@@ -68,16 +75,12 @@ final class ContactEchoSurfaceView: NSView, MTKViewDelegate {
             addSubview(view)
             metalView = view
         }
-        for name in [NSWindow.didChangeOcclusionStateNotification, NSWindow.didMiniaturizeNotification,
-                     NSWindow.didDeminiaturizeNotification, NSApplication.didHideNotification,
-                     NSApplication.didUnhideNotification] {
-            NotificationCenter.default.addObserver(self, selector: #selector(visibilityChanged), name: name, object: nil)
-        }
     }
 
     required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
 
     func update(echoes: [ContactEcho], dark: Bool, reducedMotion: Bool, increasedContrast: Bool) {
+        guard !stopped else { return }
         guard self.echoes != echoes || self.dark != dark || self.reducedMotion != reducedMotion || self.increasedContrast != increasedContrast else { return }
         self.echoes = echoes
         self.dark = dark
@@ -87,18 +90,48 @@ final class ContactEchoSurfaceView: NSView, MTKViewDelegate {
     }
 
     private var visible: Bool {
-        window?.isVisible == true && window?.isMiniaturized == false &&
+        !stopped && window?.isVisible == true && window?.isMiniaturized == false &&
         window?.occlusionState.contains(.visible) == true && !NSApp.isHidden && !isHiddenOrHasHiddenAncestor
     }
 
-    override func viewDidMoveToWindow() { super.viewDidMoveToWindow(); tick() }
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        cancelTimer()
+        NotificationCenter.default.removeObserver(self)
+        guard !stopped, let window else { return }
+        // Only this surface's window can wake it; unrelated windows must not redraw it.
+        for name in [NSWindow.didChangeOcclusionStateNotification, NSWindow.didMiniaturizeNotification,
+                     NSWindow.didDeminiaturizeNotification] {
+            NotificationCenter.default.addObserver(self, selector: #selector(visibilityChanged), name: name, object: window)
+        }
+        NotificationCenter.default.addObserver(self, selector: #selector(windowClosing), name: NSWindow.willCloseNotification, object: window)
+        for name in [NSApplication.didHideNotification, NSApplication.didUnhideNotification] {
+            NotificationCenter.default.addObserver(self, selector: #selector(visibilityChanged), name: name, object: NSApp)
+        }
+        tick()
+    }
     override func layout() { super.layout(); if visible { redraw() } }
-    @objc private func visibilityChanged() { tick() }
+    @objc private func visibilityChanged() {
+        guard !stopped else { return }
+        activity.visibilityCallbacks += 1
+        tick()
+    }
+    @objc private func windowClosing() { stop() }
 
-    func stop() { timer?.invalidate(); timer = nil }
+    private func cancelTimer() { timer?.invalidate(); timer = nil }
+
+    /// Terminal teardown. A reopened inspector gets a fresh surface, never a replayed timer.
+    func stop() {
+        stopped = true
+        cancelTimer()
+        echoes = []
+        NotificationCenter.default.removeObserver(self)
+        metalView?.delegate = nil
+        metalView?.releaseDrawables()
+    }
 
     private func tick() {
-        stop()
+        cancelTimer()
         guard visible else { return }
         let now = ProcessInfo.processInfo.systemUptime
         let active = echoes.filter { $0.isActive(at: now, reducedMotion: reducedMotion) }
@@ -108,7 +141,11 @@ final class ContactEchoSurfaceView: NSView, MTKViewDelegate {
             ? max(0.001, (active.first?.timestamp ?? now) + ContactEcho.reducedDuration - now)
             : 1.0 / 60.0
         let timer = Timer(timeInterval: delay, repeats: false) { [weak self] _ in
-            MainActor.assumeIsolated { self?.tick() }
+            MainActor.assumeIsolated {
+                guard let self, !self.stopped else { return }
+                self.activity.timerCallbacks += 1
+                self.tick()
+            }
         }
         RunLoop.main.add(timer, forMode: .common)
         self.timer = timer
@@ -121,15 +158,16 @@ final class ContactEchoSurfaceView: NSView, MTKViewDelegate {
     func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) {}
     func draw(in view: MTKView) {
         guard visible, let drawable = view.currentDrawable, let renderer else { return }
-        renderer.render(to: drawable.texture, size: bounds.size, echoes: echoes,
+        let command = renderer.render(to: drawable.texture, size: bounds.size, echoes: echoes,
                         now: ProcessInfo.processInfo.systemUptime, dark: dark,
                         reducedMotion: reducedMotion, increasedContrast: increasedContrast,
                         drawable: drawable)
+        if command != nil { activity.gpuSubmissions += 1 }
     }
 
     // A simple circular echo remains available if Metal cannot initialize.
     override func draw(_ dirtyRect: NSRect) {
-        guard metalView == nil else { return }
+        guard !stopped, metalView == nil else { return }
         (dark ? NSColor(srgbRed: 38/255, green: 41/255, blue: 34/255, alpha: 1)
               : NSColor(srgbRed: 243/255, green: 244/255, blue: 239/255, alpha: 1)).setFill()
         bounds.fill()

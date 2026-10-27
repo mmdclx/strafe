@@ -211,7 +211,7 @@ final class GestureClassifier {
             if candidateEnded || candidatePhaseEnding {
                 if shouldTriggerTap(candidate: candidate, now: now, currentIds: currentIds) {
                     triggeredEvent = candidate.deltaX < 0 ? .left : .right
-                    recognizedContact = activeTouches[candidate.id]?.position
+                    if includeDebugState { recognizedContact = activeTouches[candidate.id]?.position }
                     lastTriggerTime = now
                     tapLocked = true
                 }
