@@ -151,11 +151,20 @@ Manual review for this UI:
 4. Profile real trackpad input with Debug open and closed using the performance
    metrics below. Unit tests do not establish hardware CPU/latency overhead.
 
-Until MM-86 is fixed, explicitly compile before bundling to avoid stale binaries:
+`make build`, `make run`, and `make package-release` always invoke SwiftPM's
+incremental build before touching the app bundle. Compilation or output-path
+lookup failure stops the target; an existing binary cannot be used as a fallback.
+No separate `swift build` command is needed:
 
 ```sh
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift build -c release
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer make build CONFIG=release
+```
+
+Build-flow regression checks use temporary fixtures and tool stand-ins, without
+launching the app or modifying the repository's build outputs:
+
+```sh
+python3 -B -m unittest discover -s Tests/Packaging -v
 ```
 
 ## Performance Metrics
