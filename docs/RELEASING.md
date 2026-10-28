@@ -20,6 +20,11 @@ This project currently uses a manual release flow. Release assets are public pre
 make package-release
 ```
 
+This runs a fresh incremental release build before bundling and archiving. If
+compilation fails, packaging stops without replacing the previous bundle/archive
+or reporting success. Existing artifacts may still be present from an earlier
+successful build; do not distribute them after a failed command.
+
 4. Confirm the generated files in `build/`:
    - `Strafe.app`
    - `Strafe-X.Y.Z-macos.zip`
